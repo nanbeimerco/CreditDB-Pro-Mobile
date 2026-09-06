@@ -1,0 +1,57 @@
+name: Publish Database Release
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/creditdb.db'
+      - 'CreditDB Pro for Android/app/src/main/assets/creditdb.db'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create or Update Database Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Locate creditdb.db
+        id: locate_db
+        run: |
+          if [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.db" ]; then
+            echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
+          elif [ -f "app/src/main/assets/creditdb.db" ]; then
+            echo "db_path=app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
+          else
+            echo "Searching for creditdb.db..."
+            FOUND=$(find . -name "creditdb.db" -not -path "*/build/*" | head -n 1)
+            if [ -z "$FOUND" ]; then
+              echo "Error: creditdb.db not found!"
+              exit 1
+            fi
+            echo "db_path=$FOUND" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get current date for release tag
+        id: date
+        run: echo "tag=v$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release with creditdb.db
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.date.outputs.tag }}
+          name: "CreditDB Data Release ${{ steps.date.outputs.tag }}"
+          body: |
+            Automated CreditDB Pro database update.
+            - Database: `creditdb.db`
+            - Generated at: $(date -u)
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: |
+            ${{ steps.locate_db.outputs.db_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
