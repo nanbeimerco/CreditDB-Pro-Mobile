@@ -1,0 +1,46 @@
+name: Publish Database Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create or Update Database Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Locate database file
+        id: locate_db
+        run: |
+          FOUND=$(find . \( -name "creditdb.zip" -o -name "creditdb.db" \) -not -path "*/build/*" | head -n 1)
+          if [ -z "$FOUND" ]; then
+            echo "Error: creditdb.zip or creditdb.db not found!"
+            exit 1
+          fi
+          echo "Found database at: $FOUND"
+          echo "db_path=$FOUND" >> $GITHUB_OUTPUT
+
+      - name: Get current date for release tag
+        id: date
+        run: echo "tag=v$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.date.outputs.tag }}
+          name: "CreditDB Data Release ${{ steps.date.outputs.tag }}"
+          body: |
+            Automated CreditDB Pro database update.
+            - Attached database file
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: |
+            ${{ steps.locate_db.outputs.db_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
