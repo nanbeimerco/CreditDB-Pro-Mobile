@@ -817,14 +817,16 @@ class CreditRepository(private val context: Context) {
             val assets = releaseJson["assets"]?.jsonArray ?: JsonArray(emptyList())
 
             val dbAsset = assets.firstOrNull {
-                it.jsonObject["name"]?.jsonPrimitive?.content == AppConfig.DB_ASSET_NAME
+                val aName = it.jsonObject["name"]?.jsonPrimitive?.content ?: ""
+                aName == "creditdb.zip" || aName == AppConfig.DB_ASSET_NAME
             }?.jsonObject
 
             if (dbAsset == null) {
-                onProgress(100, "最新リリース ($tagName) 内に ${AppConfig.DB_ASSET_NAME} が見つかりませんでした。")
+                onProgress(100, "最新リリース ($tagName) 内に creditdb.zip または creditdb.db が見つかりませんでした。")
                 return@withContext
             }
 
+            val assetFileName = dbAsset["name"]?.jsonPrimitive?.content ?: AppConfig.DB_ASSET_NAME
             val downloadUrl = dbAsset["browser_download_url"]?.jsonPrimitive?.content
             val assetSize = dbAsset["size"]?.jsonPrimitive?.long ?: 0L
 
@@ -833,10 +835,10 @@ class CreditRepository(private val context: Context) {
                 return@withContext
             }
 
-            onProgress(10, "最新データベース ($tagName) をダウンロード準備中...")
+            onProgress(10, "最新データベース ($tagName: $assetFileName) をダウンロード準備中...")
 
             // ダウンロード用テンポラリファイル
-            val tempDbFile = File(context.cacheDir, "creditdb_download.tmp")
+            val tempDbFile = File(context.cacheDir, if (assetFileName.endsWith(".zip")) "creditdb_download.zip" else "creditdb_download.tmp")
             if (tempDbFile.exists()) tempDbFile.delete()
 
             // 30x リダイレクト対応ダウンロード (GitHub Releases -> AWS S3 等)
