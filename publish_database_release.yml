@@ -18,18 +18,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Locate creditdb.db
+      - name: Locate database file
         id: locate_db
         run: |
-          if [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.db" ]; then
+          if [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.zip" ]; then
+            echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
+          elif [ -f "app/src/main/assets/creditdb.zip" ]; then
+            echo "db_path=app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
+          elif [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.db" ]; then
             echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
           elif [ -f "app/src/main/assets/creditdb.db" ]; then
             echo "db_path=app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
           else
-            echo "Searching for creditdb.db..."
-            FOUND=$(find . -name "creditdb.db" -not -path "*/build/*" | head -n 1)
+            echo "Searching for database..."
+            FOUND=$(find . \( -name "creditdb.zip" -o -name "creditdb.db" \) -not -path "*/build/*" | head -n 1)
             if [ -z "$FOUND" ]; then
-              echo "Error: creditdb.db not found!"
+              echo "Error: creditdb.zip or creditdb.db not found!"
               exit 1
             fi
             echo "db_path=$FOUND" >> $GITHUB_OUTPUT
