@@ -86,35 +86,46 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(isLoadingMore = true) }
             }
 
-            val fetched = repository.getLeaderboard(
-                role = state.selectedRole,
-                query = state.searchQuery,
-                sortOption = state.sortOption,
-                limit = pageSize,
-                offset = currentOffset
-            )
-
-            val total = if (reset) {
-                repository.getLeaderboardCount(
+            try {
+                val fetched = repository.getLeaderboard(
                     role = state.selectedRole,
-                    query = state.searchQuery
+                    query = state.searchQuery,
+                    sortOption = state.sortOption,
+                    limit = pageSize,
+                    offset = currentOffset
                 )
-            } else {
-                state.totalCount
-            }
 
-            currentOffset += fetched.size
-            val hasMore = fetched.size == pageSize && currentOffset < total
+                val total = if (reset) {
+                    repository.getLeaderboardCount(
+                        role = state.selectedRole,
+                        query = state.searchQuery
+                    )
+                } else {
+                    state.totalCount
+                }
 
-            _uiState.update {
-                it.copy(
-                    items = if (reset) fetched else it.items + fetched,
-                    totalCount = total,
-                    isLoading = false,
-                    isLoadingMore = false,
-                    hasMore = hasMore
-                )
+                currentOffset += fetched.size
+                val hasMore = fetched.size == pageSize && currentOffset < total
+
+                _uiState.update {
+                    it.copy(
+                        items = if (reset) fetched else it.items + fetched,
+                        totalCount = total,
+                        isLoading = false,
+                        isLoadingMore = false,
+                        hasMore = hasMore
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("StaffViewModel", "Error fetching leaderboard", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isLoadingMore = false
+                    )
+                }
             }
         }
     }
+
 }
