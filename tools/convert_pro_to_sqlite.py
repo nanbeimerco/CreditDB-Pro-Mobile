@@ -47,36 +47,148 @@ def normalize_text(text: str) -> str:
     s = re.sub(r'[\s\-_・:：,，.．!！?？/／★☆♪〜~・\(\)（）「」『』\[\]【】]', '', s)
     return s
 
+def clean_studio(names):
+    if not names:
+        return None
+    joined_all = " ".join(names)
+    joined_upper = joined_all.upper()
+
+    if (any(n.upper() == "MAD" for n in names) and any(n.upper() == "HOUSE" for n in names)) or "MADHOUSE" in joined_upper or "マッドハウス" in joined_all:
+        return "MADHOUSE"
+    if (any(n.upper() == "WIT" for n in names) and any(n.upper() == "STUDIO" for n in names)) or joined_upper.startswith("WIT"):
+        return "WIT STUDIO"
+    if (any(n.upper() == "WHITE" for n in names) and any(n.upper() == "FOX" for n in names)) or "WHITE FOX" in joined_upper:
+        return "WHITE FOX"
+    if (any(n.upper() == "LIDEN" for n in names) and any(n.upper() == "FILMS" for n in names)) or "ライデンフィルム" in joined_all or "LIDENFILMS" in joined_upper:
+        return "ライデンフィルム"
+    if any(k in joined_upper for k in ["GHIBLI", "ジブリ", "吉卜力"]):
+        return "スタジオジブリ"
+    if "MAPPA" in joined_upper:
+        return "MAPPA"
+    if "UFOTABLE" in joined_upper or "ユーフォーテーブル" in joined_all:
+        return "ufotable"
+    if "BONES" in joined_upper or "ボンズ" in joined_all:
+        return "ボンズ"
+    if "CLOVERWORKS" in joined_upper or "クローバーワークス" in joined_all:
+        return "CloverWorks"
+    if "KYOTO" in joined_upper or "京都" in joined_all or "京アニ" in joined_all:
+        return "京都アニメーション"
+    if "SHAFT" in joined_upper or "シャフト" in joined_all:
+        return "シャフト"
+    if "SUNRISE" in joined_upper or "サンライズ" in joined_all:
+        return "サンライズ"
+    if "TRIGGER" in joined_upper or "トリガー" in joined_all:
+        return "TRIGGER"
+    if "A-1" in joined_upper or "A1" in joined_upper:
+        return "A-1 Pictures"
+    if "J.C.STAFF" in joined_upper or "JCSTAFF" in joined_upper or "J.C." in joined_upper:
+        return "J.C.STAFF"
+    if "P.A.WORKS" in joined_upper or "PAWORKS" in joined_upper or "P.A." in joined_upper:
+        return "P.A.WORKS"
+    if "TOEI" in joined_upper or "東映" in joined_all:
+        return "東映アニメーション"
+    if "PIERROT" in joined_upper or "ぴえろ" in joined_all:
+        return "スタジオぴえろ"
+    if "TMS" in joined_upper or "トムス" in joined_all:
+        return "トムス・エンタテインメント"
+    if "DOGA KOBO" in joined_upper or "動画工房" in joined_all:
+        return "動画工房"
+    if "SILVER LINK" in joined_upper or "シルバーリンク" in joined_all:
+        return "SILVER LINK."
+    if "KINEMA CITRUS" in joined_upper or "キネマシトラス" in joined_all:
+        return "キネマシトラス"
+    if "PRODUCTION I.G" in joined_upper or "PRODUCTION IG" in joined_upper or "プロダクションI.G" in joined_all or "プロダクション・アイジー" in joined_all:
+        return "Production I.G"
+    if "SCIENCE SARU" in joined_upper or "サイエンスSARU" in joined_all:
+        return "サイエンスSARU"
+    if "STUDIO DEEN" in joined_upper or "スタジオディーン" in joined_all or "DEEN" in joined_upper:
+        return "スタジオディーン"
+    if "OLM" in joined_upper:
+        return "OLM"
+    if "AIC" in joined_upper:
+        return "AIC"
+    if "GONZO" in joined_upper:
+        return "GONZO"
+    if "XEBEC" in joined_upper or "ジーベック" in joined_all:
+        return "XEBEC"
+    if "TROYCA" in joined_upper or "トロイカ" in joined_all:
+        return "TROYCA"
+    if "LERCHE" in joined_upper or "ラルケ" in joined_all:
+        return "Lerche"
+    if "COMIX WAVE" in joined_upper or "コミックス・ウェーブ" in joined_all:
+        return "コミックス・ウェーブ・フィルム"
+    if "FEEL" in joined_upper or "feel." in joined_all:
+        return "feel."
+    if "TATSUNOKO" in joined_upper or "タツノコ" in joined_all:
+        return "タツノコプロ"
+    if "GAINAX" in joined_upper or "ガイナックス" in joined_all:
+        return "GAINAX"
+    if "DAVID" in joined_upper or "デイヴィッドプロダクション" in joined_all:
+        return "david production"
+    if "スタジオバインド" in joined_all or "STUDIO BIND" in joined_upper:
+        return "スタジオバインド"
+    if "スタジオヴォルン" in joined_all or "VOLN" in joined_upper:
+        return "スタジオヴォルン"
+    if "Nexus" in joined_all or "NEXUS" in joined_upper:
+        return "Nexus"
+    if "C-Station" in joined_all or "C STATION" in joined_upper:
+        return "C-Station"
+    if "テレコム" in joined_all:
+        return "テレコム・アニメーションフィルム"
+    if "シンエイ動画" in joined_all:
+        return "シンエイ動画"
+    if "日本アニメーション" in joined_all:
+        return "日本アニメーション"
+
+    noise = {
+        "振付", "人名", "配角", "Triple", "ON", "PRODUCTION", "Production", "Kim", "Pictures",
+        "フジテレビ", "テレビ朝日", "TBS", "日本テレビ", "テレビ東京", "NHK", "TOKYO MX", "MBS", "BS11", "AT-X",
+        "松倉友二", "大月俊倫", "丸山正雄", "植田益朗", "川村元気", "読売広告社", "電通", "博報堂", "アニプレックス"
+    }
+    filtered = [n for n in names if n not in noise and len(n) > 1 and not n.startswith("第")]
+    if not filtered:
+        return None
+    candidate = filtered[0]
+    bad = ["振付", "音響", "監督", "原画", "デザイン", "編集", "美術", "制作進行", "テレビ", "放送"]
+    if any(b in candidate for b in bad):
+        return None
+    return candidate
+
+
 def main():
     print("Initializing AnimePipeline and loading fast cache...")
     p = AnimePipeline()
     p.fast_load()
 
-    # Train predictor if needed to get tree model
-    if not p.is_predictor_ready and not p.is_trained:
-        print("Training quality predictor model...")
-        p.train()
-
     assets_dir = os.path.join(str(root_dir), "CreditDB Pro for Android", "app", "src", "main", "assets")
     os.makedirs(assets_dir, exist_ok=True)
-
-    # 0. Export LightGBM tree model to predictor_model.json
     model_json_path = os.path.join(assets_dir, "predictor_model.json")
-    print(f"Exporting predictor tree model to {model_json_path}...")
-    if hasattr(p.predictor, "model") and hasattr(p.predictor.model, "booster_"):
-        model_dump = p.predictor.model.booster_.dump_model()
-        model_data = {
-            "feature_names": p.predictor.feature_names,
-            "global_mean": float(p.bias_model.global_mean),
-            "role_m": DEFAULT_ROLE_M,
-            "tree_info": [
-                {"tree_structure": t["tree_structure"]}
-                for t in model_dump.get("tree_info", [])
-            ]
-        }
-        with open(model_json_path, "w", encoding="utf-8") as f:
-            json.dump(model_data, f, ensure_ascii=False)
-        print(f"Exported {len(model_data['tree_info'])} trees to predictor_model.json.")
+
+    # Train predictor if needed to get tree model
+    if not os.path.exists(model_json_path):
+        if not p.is_predictor_ready and not p.is_trained:
+            print("Training quality predictor model...")
+            p.train()
+
+        # Export LightGBM tree model to predictor_model.json
+        print(f"Exporting predictor tree model to {model_json_path}...")
+        if hasattr(p.predictor, "model") and hasattr(p.predictor.model, "booster_"):
+            model_dump = p.predictor.model.booster_.dump_model()
+            model_data = {
+                "feature_names": p.predictor.feature_names,
+                "global_mean": float(p.bias_model.global_mean),
+                "role_m": DEFAULT_ROLE_M,
+                "tree_info": [
+                    {"tree_structure": t["tree_structure"]}
+                    for t in model_dump.get("tree_info", [])
+                ]
+            }
+            with open(model_json_path, "w", encoding="utf-8") as f:
+                json.dump(model_data, f, ensure_ascii=False)
+            print(f"Exported {len(model_data['tree_info'])} trees to predictor_model.json.")
+    else:
+        print(f"Predictor model {model_json_path} already exists. Skipping training.")
+
 
     dest_db = os.path.join(assets_dir, "creditdb.db")
     if os.path.exists(dest_db):
@@ -209,6 +321,36 @@ def main():
     cursor.execute("CREATE INDEX idx_srf_name ON staff_role_features(name);")
     cursor.execute("CREATE INDEX idx_srf_role ON staff_role_features(role);")
 
+    # 7. Studios (for studio ranking & fast studio search)
+    cursor.execute("""
+    CREATE TABLE studios (
+        name TEXT PRIMARY KEY,
+        name_norm TEXT NOT NULL,
+        works_count INTEGER NOT NULL,
+        best_work_title TEXT,
+        best_work_year INTEGER,
+        best_work_dev REAL,
+        best_work_tier TEXT
+    );
+    """)
+    cursor.execute("CREATE INDEX idx_studios_works_count ON studios(works_count DESC);")
+    cursor.execute("CREATE INDEX idx_studios_name_norm ON studios(name_norm);")
+
+    # 8. Studio Works (for studio detail screen)
+    cursor.execute("""
+    CREATE TABLE studio_works (
+        studio_name TEXT NOT NULL,
+        work_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        deviation_score REAL NOT NULL,
+        tier TEXT NOT NULL,
+        PRIMARY KEY (studio_name, work_id)
+    );
+    """)
+    cursor.execute("CREATE INDEX idx_sw_studio ON studio_works(studio_name, year DESC);")
+
+
     print("Populating Summary...")
     cv_count = len(p.staff_evaluator.get_leaderboard(role='cv', limit=0))
     cursor.execute("""
@@ -233,6 +375,7 @@ def main():
     print("Populating Works & Comparison Table...")
     comp_map = {item["work_id"]: item for item in p.cached_comparison_table}
     works_rows = []
+    studios_aggregation = {}
 
     # Count evaluated works for accurate percentile/tiering
     evaluated_works_count = sum(1 for wid, m in p.works_metadata.items() if not m.get("is_archive_only") and (wid in comp_map or float(m.get("anilist_raw_score", 0.0)) > 0))
@@ -300,6 +443,22 @@ def main():
                 search_terms.append(name)
             enriched_staff[rk] = enriched_members
 
+        # Collect studio info
+        raw_studios = raw_staff.get("studio", [])
+        if isinstance(raw_studios, str):
+            raw_studios = [raw_studios]
+        s_names = [str(x).strip() for x in raw_studios if x]
+        clean_s = clean_studio(s_names)
+        if clean_s:
+            search_terms.append(clean_s)
+            studios_aggregation.setdefault(clean_s, []).append({
+                "work_id": work_id,
+                "title": title,
+                "year": year,
+                "deviation_score": dev_score,
+                "tier": tier
+            })
+
         # Build enriched characters / voice actors
         raw_chars = meta.get("characters", [])
         enriched_chars = []
@@ -355,6 +514,46 @@ def main():
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, works_rows)
     print(f"Inserted {len(works_rows)} works.")
+
+    print("Populating Studios & Studio Works...")
+    studio_rows = []
+    sw_rows = []
+    for sname, w_list in studios_aggregation.items():
+        wcount = len(w_list)
+        best_w = max(w_list, key=lambda x: (x["deviation_score"], x["year"]))
+        studio_rows.append((
+            sname,
+            normalize_text(sname),
+            wcount,
+            best_w["title"],
+            best_w["year"],
+            best_w["deviation_score"],
+            best_w["tier"]
+        ))
+        for w in w_list:
+            sw_rows.append((
+                sname,
+                w["work_id"],
+                w["title"],
+                w["year"],
+                w["deviation_score"],
+                w["tier"]
+            ))
+
+    cursor.executemany("""
+    INSERT INTO studios (
+        name, name_norm, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, studio_rows)
+    print(f"Inserted {len(studio_rows)} studios.")
+
+    cursor.executemany("""
+    INSERT INTO studio_works (
+        studio_name, work_id, title, year, deviation_score, tier
+    ) VALUES (?, ?, ?, ?, ?, ?)
+    """, sw_rows)
+    print(f"Inserted {len(sw_rows)} studio works entries.")
+
 
     print("Populating Leaderboards (10 roles)...")
     roles = ["all", "director", "series_comp", "char_design", "sakkan", "genga", "unit_director", "music", "art_dir", "cv"]
@@ -498,6 +697,20 @@ def main():
     zip_size = os.path.getsize(zip_assets) / (1024 * 1024)
     print(f"=== Successfully created creditdb.zip: {zip_size:.2f} MB ===")
 
+    # Auto-compress to creditdb.db.gz for Web
+    import gzip
+    web_public_dir = os.path.join(str(root_dir), "CreditDB for Web", "public", "data")
+    if os.path.exists(web_public_dir):
+        gz_web = os.path.join(web_public_dir, "creditdb.db.gz")
+        print(f"Compressing {dest_db} to {gz_web} (level 9)...")
+        with open(dest_db, "rb") as f_in, gzip.open(gz_web, "wb", compresslevel=9) as f_out:
+            shutil.copyfileobj(f_in, f_out)
+        gz_size = os.path.getsize(gz_web) / (1024 * 1024)
+        print(f"=== Successfully created creditdb.db.gz for Web: {gz_size:.2f} MB ===")
+        web_dist_dir = os.path.join(str(root_dir), "CreditDB for Web", "dist", "data")
+        if os.path.exists(web_dist_dir):
+            shutil.copy2(gz_web, os.path.join(web_dist_dir, "creditdb.db.gz"))
+
     # Remove raw db from assets
     if os.path.exists(dest_db):
         os.remove(dest_db)
@@ -505,3 +718,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

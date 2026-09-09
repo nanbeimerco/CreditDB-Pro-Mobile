@@ -359,101 +359,111 @@ class CreditRepository(private val context: Context) {
 
         // スタジオ役職の場合は studios テーブルから高速取得
         if (role == "studio") {
-            val conditions = mutableListOf<String>()
-            val args = mutableListOf<String>()
-            if (query.isNotBlank()) {
-                val qNorm = TextNormalizer.normalize(query)
-                val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
-                val matchedStudios = if (hasLatin) StaffNameResolver.searchStudiosByRomaji(query) else emptyList()
-                if (matchedStudios.isNotEmpty()) {
-                    val placeholders = matchedStudios.joinToString(",") { "?" }
-                    conditions.add("(name_norm LIKE ? OR name IN ($placeholders))")
-                    args.add("%$qNorm%")
-                    matchedStudios.forEach { args.add(it) }
-                } else {
-                    conditions.add("name_norm LIKE ?")
-                    args.add("%$qNorm%")
+            try {
+                val conditions = mutableListOf<String>()
+                val args = mutableListOf<String>()
+                if (query.isNotBlank()) {
+                    val qNorm = TextNormalizer.normalize(query)
+                    val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
+                    val matchedStudios = if (hasLatin) StaffNameResolver.searchStudiosByRomaji(query) else emptyList()
+                    if (matchedStudios.isNotEmpty()) {
+                        val placeholders = matchedStudios.joinToString(",") { "?" }
+                        conditions.add("(name_norm LIKE ? OR name IN ($placeholders))")
+                        args.add("%$qNorm%")
+                        matchedStudios.forEach { args.add(it) }
+                    } else {
+                        conditions.add("name_norm LIKE ?")
+                        args.add("%$qNorm%")
+                    }
                 }
-            }
-            val whereClause = if (conditions.isNotEmpty()) "WHERE " + conditions.joinToString(" AND ") else ""
-            val sql = """
-                SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier
-                FROM studios $whereClause ORDER BY works_count DESC LIMIT ? OFFSET ?
-            """.trimIndent()
-            args.add(limit.toString())
-            args.add(offset.toString())
+                val whereClause = if (conditions.isNotEmpty()) "WHERE " + conditions.joinToString(" AND ") else ""
+                val sql = """
+                    SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier
+                    FROM studios $whereClause ORDER BY works_count DESC LIMIT ? OFFSET ?
+                """.trimIndent()
+                args.add(limit.toString())
+                args.add(offset.toString())
 
-            val cursor = db.rawQuery(sql, args.toTypedArray())
-            val list = mutableListOf<LeaderboardItem>()
-            var rank = offset + 1
-            while (cursor.moveToNext()) {
-                val bwTitle = cursor.getString(2)
-                list.add(
-                    LeaderboardItem(
-                        role = "studio",
-                        name = cursor.getString(0),
-                        worksCount = cursor.getInt(1),
-                        rating = 0.0,
-                        cumulativeZ = 0.0,
-                        ratingRank = rank,
-                        cumulativeRank = rank,
-                        ratingTier = cursor.getString(5) ?: "B",
-                        cumulativeTier = "B",
-                        bestWorkTitle = bwTitle,
-                        bestWorkTitleEn = titleToEnMap[bwTitle],
-                        bestWorkYear = cursor.getInt(3).takeIf { it > 0 },
-                        bestWorkZ = cursor.getDouble(4).takeIf { !cursor.isNull(4) }
+                val cursor = db.rawQuery(sql, args.toTypedArray())
+                val list = mutableListOf<LeaderboardItem>()
+                var rank = offset + 1
+                while (cursor.moveToNext()) {
+                    val bwTitle = cursor.getString(2)
+                    list.add(
+                        LeaderboardItem(
+                            role = "studio",
+                            name = cursor.getString(0),
+                            worksCount = cursor.getInt(1),
+                            rating = 0.0,
+                            cumulativeZ = 0.0,
+                            ratingRank = rank,
+                            cumulativeRank = rank,
+                            ratingTier = cursor.getString(5) ?: "B",
+                            cumulativeTier = "B",
+                            bestWorkTitle = bwTitle,
+                            bestWorkTitleEn = titleToEnMap[bwTitle],
+                            bestWorkYear = cursor.getInt(3).takeIf { it > 0 },
+                            bestWorkZ = cursor.getDouble(4).takeIf { !cursor.isNull(4) }
+                        )
                     )
-                )
-                rank++
+                    rank++
+                }
+                cursor.close()
+                return@withContext list
+            } catch (e: Exception) {
+                android.util.Log.e("CreditRepository", "Failed to query studios leaderboard", e)
+                return@withContext emptyList()
             }
-            cursor.close()
-            return@withContext list
         }
 
         // 全役職で検索クエリがある場合、マッチするスタジオを先頭に統合
         val matchedStudios = mutableListOf<LeaderboardItem>()
         if (role == "all" && query.isNotBlank() && offset == 0) {
-            val qNorm = TextNormalizer.normalize(query)
-            val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
-            val matchedStudioNames = if (hasLatin) StaffNameResolver.searchStudiosByRomaji(query) else emptyList()
-            val stConditions = mutableListOf<String>()
-            val stArgs = mutableListOf<String>()
-            if (matchedStudioNames.isNotEmpty()) {
-                val placeholders = matchedStudioNames.joinToString(",") { "?" }
-                stConditions.add("(name_norm LIKE ? OR name IN ($placeholders))")
-                stArgs.add("%$qNorm%")
-                matchedStudioNames.forEach { stArgs.add(it) }
-            } else {
-                stConditions.add("name_norm LIKE ?")
-                stArgs.add("%$qNorm%")
-            }
-            val stCursor = db.rawQuery(
-                "SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier FROM studios WHERE ${stConditions.joinToString(" AND ")} ORDER BY works_count DESC LIMIT 3",
-                stArgs.toTypedArray()
-            )
-            while (stCursor.moveToNext()) {
-                val bwTitle = stCursor.getString(2)
-                matchedStudios.add(
-                    LeaderboardItem(
-                        role = "studio",
-                        name = stCursor.getString(0),
-                        worksCount = stCursor.getInt(1),
-                        rating = 0.0,
-                        cumulativeZ = 0.0,
-                        ratingRank = 0,
-                        cumulativeRank = 0,
-                        ratingTier = stCursor.getString(5) ?: "B",
-                        cumulativeTier = "B",
-                        bestWorkTitle = bwTitle,
-                        bestWorkTitleEn = titleToEnMap[bwTitle],
-                        bestWorkYear = stCursor.getInt(3).takeIf { it > 0 },
-                        bestWorkZ = stCursor.getDouble(4).takeIf { !stCursor.isNull(4) }
-                    )
+            try {
+                val qNorm = TextNormalizer.normalize(query)
+                val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
+                val matchedStudioNames = if (hasLatin) StaffNameResolver.searchStudiosByRomaji(query) else emptyList()
+                val stConditions = mutableListOf<String>()
+                val stArgs = mutableListOf<String>()
+                if (matchedStudioNames.isNotEmpty()) {
+                    val placeholders = matchedStudioNames.joinToString(",") { "?" }
+                    stConditions.add("(name_norm LIKE ? OR name IN ($placeholders))")
+                    stArgs.add("%$qNorm%")
+                    matchedStudioNames.forEach { stArgs.add(it) }
+                } else {
+                    stConditions.add("name_norm LIKE ?")
+                    stArgs.add("%$qNorm%")
+                }
+                val stCursor = db.rawQuery(
+                    "SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier FROM studios WHERE ${stConditions.joinToString(" AND ")} ORDER BY works_count DESC LIMIT 3",
+                    stArgs.toTypedArray()
                 )
+                while (stCursor.moveToNext()) {
+                    val bwTitle = stCursor.getString(2)
+                    matchedStudios.add(
+                        LeaderboardItem(
+                            role = "studio",
+                            name = stCursor.getString(0),
+                            worksCount = stCursor.getInt(1),
+                            rating = 0.0,
+                            cumulativeZ = 0.0,
+                            ratingRank = 0,
+                            cumulativeRank = 0,
+                            ratingTier = stCursor.getString(5) ?: "B",
+                            cumulativeTier = "B",
+                            bestWorkTitle = bwTitle,
+                            bestWorkTitleEn = titleToEnMap[bwTitle],
+                            bestWorkYear = stCursor.getInt(3).takeIf { it > 0 },
+                            bestWorkZ = stCursor.getDouble(4).takeIf { !stCursor.isNull(4) }
+                        )
+                    )
+                }
+                stCursor.close()
+            } catch (e: Exception) {
+                android.util.Log.e("CreditRepository", "Failed to query matched studios for query: $query", e)
             }
-            stCursor.close()
         }
+
 
         val conditions = mutableListOf<String>()
         val args = mutableListOf<String>()
@@ -525,31 +535,37 @@ class CreditRepository(private val context: Context) {
         val db = dbHelper.readableDatabase
 
         if (role == "studio") {
-            val conditions = mutableListOf<String>()
-            val args = mutableListOf<String>()
-            if (query.isNotBlank()) {
-                val qNorm = TextNormalizer.normalize(query)
-                val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
-                val matchedStudios = if (hasLatin) StaffNameResolver.searchStudiosByRomaji(query) else emptyList()
-                if (matchedStudios.isNotEmpty()) {
-                    val placeholders = matchedStudios.joinToString(",") { "?" }
-                    conditions.add("(name_norm LIKE ? OR name IN ($placeholders))")
-                    args.add("%$qNorm%")
-                    matchedStudios.forEach { args.add(it) }
-                } else {
-                    conditions.add("name_norm LIKE ?")
-                    args.add("%$qNorm%")
+            try {
+                val conditions = mutableListOf<String>()
+                val args = mutableListOf<String>()
+                if (query.isNotBlank()) {
+                    val qNorm = TextNormalizer.normalize(query)
+                    val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
+                    val matchedStudios = if (hasLatin) StaffNameResolver.searchStudiosByRomaji(query) else emptyList()
+                    if (matchedStudios.isNotEmpty()) {
+                        val placeholders = matchedStudios.joinToString(",") { "?" }
+                        conditions.add("(name_norm LIKE ? OR name IN ($placeholders))")
+                        args.add("%$qNorm%")
+                        matchedStudios.forEach { args.add(it) }
+                    } else {
+                        conditions.add("name_norm LIKE ?")
+                        args.add("%$qNorm%")
+                    }
                 }
+                val whereClause = if (conditions.isNotEmpty()) "WHERE " + conditions.joinToString(" AND ") else ""
+                val cursor = db.rawQuery("SELECT count(*) FROM studios $whereClause", args.toTypedArray())
+                var count = 0
+                if (cursor.moveToFirst()) {
+                    count = cursor.getInt(0)
+                }
+                cursor.close()
+                return@withContext count
+            } catch (e: Exception) {
+                android.util.Log.e("CreditRepository", "Failed to count studios", e)
+                return@withContext 0
             }
-            val whereClause = if (conditions.isNotEmpty()) "WHERE " + conditions.joinToString(" AND ") else ""
-            val cursor = db.rawQuery("SELECT count(*) FROM studios $whereClause", args.toTypedArray())
-            var count = 0
-            if (cursor.moveToFirst()) {
-                count = cursor.getInt(0)
-            }
-            cursor.close()
-            return@withContext count
         }
+
 
         val conditions = mutableListOf<String>()
         val args = mutableListOf<String>()
@@ -1284,31 +1300,37 @@ class CreditRepository(private val context: Context) {
      * SQLite studio_works インデックステーブルから 0.1ms で即時取得
      */
     suspend fun getStudioWorks(studioName: String): List<StudioWorkItem> = withContext(Dispatchers.IO) {
-        val db = dbHelper.readableDatabase
-        val cursor = db.rawQuery(
-            """
-            SELECT sw.work_id, sw.title, sw.year, sw.deviation_score, sw.tier, w.title_en
-            FROM studio_works sw
-            LEFT JOIN works w ON w.work_id = sw.work_id
-            WHERE sw.studio_name = ?
-            ORDER BY sw.year DESC, sw.deviation_score DESC
-            """.trimIndent(),
-            arrayOf(studioName)
-        )
-        val list = mutableListOf<StudioWorkItem>()
-        while (cursor.moveToNext()) {
-            list.add(
-                StudioWorkItem(
-                    workId = cursor.getString(0),
-                    title = cursor.getString(1),
-                    year = cursor.getInt(2),
-                    deviationScore = cursor.getDouble(3),
-                    tier = cursor.getString(4),
-                    titleEn = cursor.getString(5)?.takeIf { it.isNotBlank() }
-                )
+        try {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery(
+                """
+                SELECT sw.work_id, sw.title, sw.year, sw.deviation_score, sw.tier, w.title_en
+                FROM studio_works sw
+                LEFT JOIN works w ON w.work_id = sw.work_id
+                WHERE sw.studio_name = ?
+                ORDER BY sw.year DESC, sw.deviation_score DESC
+                """.trimIndent(),
+                arrayOf(studioName)
             )
+            val list = mutableListOf<StudioWorkItem>()
+            while (cursor.moveToNext()) {
+                list.add(
+                    StudioWorkItem(
+                        workId = cursor.getString(0),
+                        title = cursor.getString(1),
+                        year = cursor.getInt(2),
+                        deviationScore = cursor.getDouble(3),
+                        tier = cursor.getString(4),
+                        titleEn = cursor.getString(5)?.takeIf { it.isNotBlank() }
+                    )
+                )
+            }
+            cursor.close()
+            list
+        } catch (e: Exception) {
+            android.util.Log.e("CreditRepository", "Failed to get studio works for $studioName", e)
+            emptyList()
         }
-        cursor.close()
-        list
     }
+
 }

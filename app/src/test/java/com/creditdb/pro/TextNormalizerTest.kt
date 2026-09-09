@@ -29,4 +29,12 @@ class TextNormalizerTest {
         assertEquals("", TextNormalizer.normalize(null))
         assertEquals("", TextNormalizer.normalize("   "))
     }
+
+    @Test
+    fun testNormalization_staffNames() {
+        assertEquals("梶", TextNormalizer.normalize("梶"))
+        assertEquals("梶裕貴", TextNormalizer.normalize("梶 裕貴"))
+        assertEquals("かじゆうき", TextNormalizer.normalize("カジ ユウキ"))
+    }
 }
+
