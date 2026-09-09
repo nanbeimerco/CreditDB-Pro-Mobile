@@ -711,6 +711,32 @@ def main():
         if os.path.exists(web_dist_dir):
             shutil.copy2(gz_web, os.path.join(web_dist_dir, "creditdb.db.gz"))
 
+        # Update version.json with exact sha256
+        import hashlib
+        with open(gz_web, "rb") as f_gz:
+            gz_sha = hashlib.sha256(f_gz.read()).hexdigest()
+        v_data = {
+            "version": "1.3.1",
+            "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "totalWorks": len(p.works_metadata),
+            "totalStaff": p.staff_evaluator.total_staff_count,
+            "totalCv": cv_count,
+            "totalStudios": len(studio_rows),
+            "yearMin": 1950,
+            "yearMax": 2026,
+            "globalMean": float(p.bias_model.global_mean),
+            "dbFileName": "creditdb.db.gz",
+            "dbSizeCompressed": os.path.getsize(gz_web),
+            "dbSizeUncompressed": os.path.getsize(dest_db),
+            "sha256": gz_sha
+        }
+        for vpath in [os.path.join(web_public_dir, "version.json"), os.path.join(web_dist_dir, "version.json")]:
+            if os.path.exists(os.path.dirname(vpath)):
+                with open(vpath, "w", encoding="utf-8") as f_v:
+                    json.dump(v_data, f_v, indent=2)
+                print(f"Updated {vpath} (sha256={gz_sha[:16]}...).")
+
+
     # Remove raw db from assets
     if os.path.exists(dest_db):
         os.remove(dest_db)

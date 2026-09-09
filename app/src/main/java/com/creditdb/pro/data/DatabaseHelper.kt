@@ -14,7 +14,7 @@ class DatabaseHelper private constructor(private val context: Context) :
 
     companion object {
         const val DB_NAME = "creditdb.db"
-        const val DB_VERSION = 5
+        const val DB_VERSION = 6
 
         @Volatile
         private var instance: DatabaseHelper? = null
@@ -31,11 +31,28 @@ class DatabaseHelper private constructor(private val context: Context) :
 
     fun ensureDatabaseExists() {
         val dbPath = context.getDatabasePath(DB_NAME)
-        if (!dbPath.exists()) {
+        var needsRefresh = !dbPath.exists()
+        if (dbPath.exists()) {
+            // テーブル整合性チェック: studios テーブルが存在するか確認
+            try {
+                SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                    val cursor = db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name='studios'", null)
+                    val hasStudios = cursor.moveToFirst()
+                    cursor.close()
+                    if (!hasStudios) {
+                        needsRefresh = true
+                    }
+                }
+            } catch (e: Exception) {
+                needsRefresh = true
+            }
+        }
+        if (needsRefresh) {
             dbPath.parentFile?.mkdirs()
             copyDatabaseFromAssets(dbPath)
         }
     }
+
 
     /**
      * ダウンロードされた新しいDBファイル（またはZIP）で既存DBを安全にアトミック置換する
@@ -173,10 +190,12 @@ class DatabaseHelper private constructor(private val context: Context) :
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
         if (newVersion > oldVersion) {
             val dbPath = context.getDatabasePath(DB_NAME)
-            if (dbPath.exists()) {
-                dbPath.delete()
+            try {
+                copyDatabaseFromAssets(dbPath)
+            } catch (e: Exception) {
+                // copy fallback
             }
-            ensureDatabaseExists()
         }
     }
+
 }
