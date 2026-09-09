@@ -2,6 +2,13 @@ name: Publish Database Release
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '**/creditdb.zip'
+      - 'creditdb.zip'
+      - 'app/src/main/assets/creditdb.zip'
+      - 'CreditDB Pro for Android/app/src/main/assets/creditdb.zip'
+      - '**/creditdb.db'
 
 permissions:
   contents: write
@@ -17,26 +24,37 @@ jobs:
       - name: Locate database file
         id: locate_db
         run: |
-          FOUND=$(find . \( -name "creditdb.zip" -o -name "creditdb.db" \) -not -path "*/build/*" | head -n 1)
-          if [ -z "$FOUND" ]; then
-            echo "Error: creditdb.zip or creditdb.db not found!"
-            exit 1
+          if [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.zip" ]; then
+            echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
+          elif [ -f "app/src/main/assets/creditdb.zip" ]; then
+            echo "db_path=app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
+          elif [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.db" ]; then
+            echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
+          elif [ -f "app/src/main/assets/creditdb.db" ]; then
+            echo "db_path=app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
+          else
+            echo "Searching for database..."
+            FOUND=$(find . \( -name "creditdb.zip" -o -name "creditdb.db" \) -not -path "*/build/*" | head -n 1)
+            if [ -z "$FOUND" ]; then
+              echo "Error: creditdb.zip or creditdb.db not found!"
+              exit 1
+            fi
+            echo "db_path=$FOUND" >> $GITHUB_OUTPUT
           fi
-          echo "Found database at: $FOUND"
-          echo "db_path=$FOUND" >> $GITHUB_OUTPUT
 
       - name: Get current date for release tag
         id: date
         run: echo "tag=v$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release with creditdb.db
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.date.outputs.tag }}
           name: "CreditDB Data Release ${{ steps.date.outputs.tag }}"
           body: |
             Automated CreditDB Pro database update.
-            - Attached database file
+            - Database: `creditdb.db`
+            - Generated at: $(date -u)
           draft: false
           prerelease: false
           make_latest: true

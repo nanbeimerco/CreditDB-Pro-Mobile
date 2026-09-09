@@ -13,6 +13,15 @@ sys.path.insert(0, str(root_dir))
 from animeevaluate.pipeline import AnimePipeline
 from animeevaluate.models.staff_evaluator import calculate_tier, DEFAULT_ROLE_M
 
+KANJI_VARIANTS = {
+    '惡': '悪', '櫻': '桜', '鐵': '鉄', '國': '国', '龍': '竜',
+    '廣': '広', '髙': '高', '﨑': '崎', '壽': '寿', '體': '体',
+    '戰': '戦', '畫': '画', '號': '号', '變': '変', '戀': '恋',
+    '黑': '黒', '蟲': '虫', '擊': '撃', '寫': '写', '眞': '真',
+    '遙': '遥', '條': '条', '齊': '斉', '齋': '斉', '斎': '斉',
+    '藪': '薮', '峰': '峯', '嶋': '島', '濱': '浜', '濵': '浜'
+}
+
 def normalize_text(text: str) -> str:
     if not text:
         return ""
@@ -20,14 +29,20 @@ def normalize_text(text: str) -> str:
     s = unicodedata.normalize('NFKC', s)
     res = []
     for ch in s:
-        code = ord(ch)
-        if ch in ('ゐ', 'ヰ'): res.append('い')
-        elif ch in ('ゑ', 'ヱ'): res.append('え')
-        elif ch in ('ゔ', 'ヴ'): res.append('ぶ')
-        elif 0x30A1 <= code <= 0x30F6:
-            res.append(chr(code - 0x60))
+        if ch in KANJI_VARIANTS:
+            res.append(KANJI_VARIANTS[ch])
+        elif ch in ('ゐ', 'ヰ'):
+            res.append('い')
+        elif ch in ('ゑ', 'ヱ'):
+            res.append('え')
+        elif ch in ('ゔ', 'ヴ'):
+            res.append('ぶ')
         else:
-            res.append(ch)
+            code = ord(ch)
+            if 0x30A1 <= code <= 0x30F6:
+                res.append(chr(code - 0x60))
+            else:
+                res.append(ch)
     s = "".join(res)
     s = re.sub(r'[\s\-_・:：,，.．!！?？/／★☆♪〜~・\(\)（）「」『』\[\]【】]', '', s)
     return s
@@ -251,8 +266,13 @@ def main():
                 continue
             enriched_members = []
             for m in members:
-                name = m.get("name") if isinstance(m, dict) else str(m)
-                name = name.strip()
+                if isinstance(m, dict):
+                    name = m.get("name")
+                else:
+                    name = str(m)
+                if not name:
+                    continue
+                name = str(name).strip()
                 if not name:
                     continue
                 rt, ct = p.staff_evaluator.get_staff_role_tier(name, rk)
@@ -264,10 +284,12 @@ def main():
         raw_chars = meta.get("characters", [])
         enriched_chars = []
         for c in raw_chars:
-            c_name = c.get("character_name", "")
-            rel = c.get("relation", "配角")
-            actor = c.get("actor_name", "")
-            rt, ct = p.staff_evaluator.get_staff_role_tier(actor, "cv")
+            if not isinstance(c, dict):
+                continue
+            c_name = str(c.get("character_name") or "").strip()
+            rel = str(c.get("relation") or "配角").strip()
+            actor = str(c.get("actor_name") or "").strip()
+            rt, ct = p.staff_evaluator.get_staff_role_tier(actor, "cv") if actor else ("-", "-")
             enriched_chars.append({
                 "character_name": c_name,
                 "relation": rel,
@@ -360,6 +382,16 @@ def main():
         top_items = p.get_staff_leaderboard(role=role_param, sort_by="rating", limit=300)
         for it in top_items:
             top_staff_names.add(it["name"])
+        top_cum = p.get_staff_leaderboard(role=role_param, sort_by="cumulative", limit=300)
+        for it in top_cum:
+            top_staff_names.add(it["name"])
+
+    # Also include notable CVs (>= 20 works) and directors (>= 5 works)
+    for name, recs in p.staff_evaluator.staff_records.items():
+        has_cv = any(r["role"] == "cv" for r in recs)
+        has_dir = any(r["role"] == "director" for r in recs)
+        if (has_cv and len(recs) >= 20) or (has_dir and len(recs) >= 5):
+            top_staff_names.add(name)
 
     prof_rows = []
     print(f"Generating detailed profiles for {len(top_staff_names)} prominent staff/CVs...")
@@ -373,10 +405,10 @@ def main():
             prof.get("primary_role", "cv"),
             prof.get("total_works", 0),
             round(float(prof.get("bayesian_rating", 0.0)), 3),
-            prof.get("overall_rating_tier", "B"),
+            prof.get("overall_tier", prof.get("overall_rating_tier", "B")),
             prof.get("overall_rank", 99999),
             round(float(prof.get("career_cumulative_z", 0.0)), 2),
-            prof.get("overall_cum_tier", "B"),
+            prof.get("cumulative_tier", prof.get("overall_cum_tier", "B")),
             prof.get("cumulative_rank", 99999),
             json.dumps(prof.get("all_role_stats", []), ensure_ascii=False),
             json.dumps(prof.get("career_trajectory", []), ensure_ascii=False)
