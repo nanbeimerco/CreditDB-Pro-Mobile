@@ -234,27 +234,47 @@ def main():
     comp_map = {item["work_id"]: item for item in p.cached_comparison_table}
     works_rows = []
 
+    # Count evaluated works for accurate percentile/tiering
+    evaluated_works_count = sum(1 for wid, m in p.works_metadata.items() if not m.get("is_archive_only") and (wid in comp_map or float(m.get("anilist_raw_score", 0.0)) > 0))
+    if evaluated_works_count == 0:
+        evaluated_works_count = len(p.works_metadata)
+
     for work_id, meta in p.works_metadata.items():
         comp = comp_map.get(work_id, {})
         title = meta.get("title", work_id)
         title_en = meta.get("title_en", "")
         year = int(meta.get("year", 2020))
 
-        raw_score = float(comp.get("anilist_raw_score", meta.get("anilist_mean_score", 0.0)))
-        raw_rank = int(comp.get("raw_score_rank", p.work_raw_ranks.get(work_id, 0)))
-        b_val = float(comp.get("debiased_b_i", p.item_biases.get(work_id, 0.0)))
-        true_z = float(comp.get("true_z_score", p.z_scores.get(work_id, 0.0)))
-        dev_score = float(comp.get("deviation_score", round(50.0 + 10.0 * true_z, 1)))
-        z_rank = int(comp.get("z_score_rank", p.work_z_ranks.get(work_id, 0)))
-        pred_z = float(comp.get("predicted_z_score", 0.0))
-        pred_score = float(comp.get("predicted_score", raw_score))
-        pred_rank = int(comp.get("pred_score_rank", p.work_pred_ranks.get(work_id, 0)))
-        residual = float(comp.get("residual", round(true_z - pred_z, 3)))
-        verdict = str(comp.get("performance_verdict", "概ねスタッフ前評判通り"))
+        raw_score = float(comp.get("anilist_raw_score", meta.get("anilist_raw_score", meta.get("anilist_mean_score", 0.0))))
+        is_archive = bool(meta.get("is_archive_only")) or (raw_score <= 0.0 and work_id not in comp_map)
 
-        total_works = len(p.works_metadata)
-        pct = (z_rank / total_works * 100.0) if total_works > 0 else 50.0
-        tier = calculate_tier(z_rank, total_works)
+        if is_archive:
+            raw_score = 0.0
+            raw_rank = 0
+            b_val = 0.0
+            true_z = 0.0
+            dev_score = 0.0
+            z_rank = 0
+            pred_z = 0.0
+            pred_score = 0.0
+            pred_rank = 0
+            residual = 0.0
+            verdict = "ARCHIVE"
+            tier = "-"
+            pct = 0.0
+        else:
+            raw_rank = int(comp.get("raw_score_rank", p.work_raw_ranks.get(work_id, 0)))
+            b_val = float(comp.get("debiased_b_i", p.item_biases.get(work_id, 0.0)))
+            true_z = float(comp.get("true_z_score", p.z_scores.get(work_id, 0.0)))
+            dev_score = float(comp.get("deviation_score", round(50.0 + 10.0 * true_z, 1)))
+            z_rank = int(comp.get("z_score_rank", p.work_z_ranks.get(work_id, 0)))
+            pred_z = float(comp.get("predicted_z_score", 0.0))
+            pred_score = float(comp.get("predicted_score", raw_score))
+            pred_rank = int(comp.get("pred_score_rank", p.work_pred_ranks.get(work_id, 0)))
+            residual = float(comp.get("residual", round(true_z - pred_z, 3)))
+            verdict = str(comp.get("performance_verdict", "概ねスタッフ前評判通り"))
+            pct = (z_rank / evaluated_works_count * 100.0) if evaluated_works_count > 0 else 50.0
+            tier = calculate_tier(z_rank, evaluated_works_count)
 
         # Build enriched staff
         raw_staff = meta.get("staff", {})
@@ -465,6 +485,23 @@ def main():
 
     db_size = os.path.getsize(dest_db) / (1024 * 1024)
     print(f"=== Successfully created CreditDB Pro SQLite DB: {dest_db} ({db_size:.2f} MB) ===")
+
+    # Auto-compress to creditdb.zip (assets and root)
+    import zipfile
+    import shutil
+    zip_assets = os.path.join(assets_dir, "creditdb.zip")
+    zip_root = os.path.join(str(root_dir), "CreditDB Pro for Android", "creditdb.zip")
+    print(f"Compressing {dest_db} to {zip_assets} (level 9)...")
+    with zipfile.ZipFile(zip_assets, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        zf.write(dest_db, arcname="creditdb.db")
+    shutil.copy2(zip_assets, zip_root)
+    zip_size = os.path.getsize(zip_assets) / (1024 * 1024)
+    print(f"=== Successfully created creditdb.zip: {zip_size:.2f} MB ===")
+
+    # Remove raw db from assets
+    if os.path.exists(dest_db):
+        os.remove(dest_db)
+        print("Cleaned up uncompressed creditdb.db from assets.")
 
 if __name__ == "__main__":
     main()
