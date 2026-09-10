@@ -14,7 +14,7 @@ class DatabaseHelper private constructor(private val context: Context) :
 
     companion object {
         const val DB_NAME = "creditdb.db"
-        const val DB_VERSION = 6
+        const val DB_VERSION = 7
 
         @Volatile
         private var instance: DatabaseHelper? = null
@@ -33,13 +33,21 @@ class DatabaseHelper private constructor(private val context: Context) :
         val dbPath = context.getDatabasePath(DB_NAME)
         var needsRefresh = !dbPath.exists()
         if (dbPath.exists()) {
-            // テーブル整合性チェック: studios テーブルが存在するか確認
+            // テーブル整合性チェック: studios テーブルが存在し、かつ作品数が 20,000 件以上か確認
             try {
                 SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                     val cursor = db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name='studios'", null)
                     val hasStudios = cursor.moveToFirst()
                     cursor.close()
-                    if (!hasStudios) {
+
+                    var totalWorks = 0
+                    val countCursor = db.rawQuery("SELECT total_works FROM summary LIMIT 1", null)
+                    if (countCursor.moveToFirst()) {
+                        totalWorks = countCursor.getInt(0)
+                    }
+                    countCursor.close()
+
+                    if (!hasStudios || totalWorks < 20000) {
                         needsRefresh = true
                     }
                 }

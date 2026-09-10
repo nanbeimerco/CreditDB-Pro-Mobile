@@ -3,6 +3,7 @@ import sqlite3
 import os
 import re
 import sys
+import time
 import unicodedata
 from pathlib import Path
 
@@ -53,7 +54,7 @@ def clean_studio(names):
     joined_all = " ".join(names)
     joined_upper = joined_all.upper()
 
-    if (any(n.upper() == "MAD" for n in names) and any(n.upper() == "HOUSE" for n in names)) or "MADHOUSE" in joined_upper or "マッドハウス" in joined_all:
+    if (any(n.upper() == "MAD" for n in names) and any(n.upper() == "HOUSE" for n in names)) or "MADHOUSE" in joined_upper or "マッドハウス" in joined_all or any(n.upper() == "MAD" for n in names):
         return "MADHOUSE"
     if (any(n.upper() == "WIT" for n in names) and any(n.upper() == "STUDIO" for n in names)) or joined_upper.startswith("WIT"):
         return "WIT STUDIO"
@@ -451,6 +452,7 @@ def main():
         clean_s = clean_studio(s_names)
         if clean_s:
             search_terms.append(clean_s)
+            enriched_staff["studio"] = [{"name": clean_s, "rt": "-", "ct": "-"}]
             studios_aggregation.setdefault(clean_s, []).append({
                 "work_id": work_id,
                 "title": title,
