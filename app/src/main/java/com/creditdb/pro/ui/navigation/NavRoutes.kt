@@ -4,10 +4,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Leaderboard
 import androidx.compose.material.icons.outlined.Movie
@@ -26,6 +28,7 @@ sealed class Screen(
                 is Predict -> com.creditdb.pro.ui.theme.AppStrings.navPredict
                 is Staff -> com.creditdb.pro.ui.theme.AppStrings.navStaff
                 is Tier -> com.creditdb.pro.ui.theme.AppStrings.navTier
+                is Scene -> com.creditdb.pro.ui.theme.AppStrings.navScene
                 is Guide -> com.creditdb.pro.ui.theme.AppStrings.navGuide
                 is WorkDetail -> "Work Details"
                 is StaffDetail -> "Staff Details"
@@ -63,6 +66,13 @@ sealed class Screen(
         unselectedIcon = Icons.Outlined.Leaderboard
     )
 
+    object Scene : Screen(
+        route = "scene",
+        title = "シーン特定",
+        selectedIcon = Icons.Filled.CameraAlt,
+        unselectedIcon = Icons.Outlined.CameraAlt
+    )
+
     object Guide : Screen(
         route = "guide",
         title = "解説",
@@ -92,6 +102,6 @@ sealed class Screen(
     }
 
     companion object {
-        val bottomNavItems = listOf(Works, Predict, Staff, Tier)
+        val bottomNavItems = listOf(Works, Staff, Tier, Scene, Predict)
     }
 }
