@@ -10,12 +10,14 @@ object AppStrings {
     val navPredict get() = "Predict"
     val navStaff get() = "Staff & CV"
     val navTier get() = "Tier List"
+    val navScene get() = "Scene"
     val navGuide get() = "Guide"
 
     fun navWorks(isEn: Boolean) = if (isEn) "Works" else "作品DB"
     fun navPredict(isEn: Boolean) = if (isEn) "Predict" else "予測編成"
     fun navStaff(isEn: Boolean) = if (isEn) "Staff & CV" else "制作・声優"
     fun navTier(isEn: Boolean) = if (isEn) "Tier List" else "Tier表"
+    fun navScene(isEn: Boolean) = if (isEn) "Scene" else "シーン特定"
     fun navGuide(isEn: Boolean) = if (isEn) "Guide" else "解説"
 
     // --- 検索バー・プレースホルダー ---
@@ -365,6 +367,37 @@ object AppStrings {
         if (isEn) "Spearman rank correlation with CreditDB era-adjusted deviation score"
         else "CreditDBの年代補正済み偏差値と、あなたの主観Tier評価との相関係数"
 
+    // --- シーン特定 (trace.moe) ---
+    val sceneTitle get() = "アニメシーン特定"
+    val sceneTitleEn get() = "Scene Search"
+    fun sceneTitle(isEn: Boolean) = if (isEn) sceneTitleEn else sceneTitle
+
+    val sceneSubtitle get() = "スクショ画像から作品名・話数・再生位置を即座に特定"
+    val sceneSubtitleEn get() = "Identify anime title, episode & exact timestamp from screenshots"
+    fun sceneSubtitle(isEn: Boolean) = if (isEn) sceneSubtitleEn else sceneSubtitle
+
+    fun sceneDropzone(isEn: Boolean) = if (isEn) "Upload Screenshot" else "画像をアップロード"
+    fun scenePasteHint(isEn: Boolean) =
+        if (isEn) "Select a screenshot image from your device or paste from clipboard."
+        else "端末内のスクリーンショットを選択するか、クリップボードから貼り付けてください。"
+    fun sceneSelectFile(isEn: Boolean) = if (isEn) "Select Image" else "画像を選択"
+    fun scenePasteClipboard(isEn: Boolean) = if (isEn) "Paste Clipboard" else "クリップボードから貼付"
+    fun sceneSearching(isEn: Boolean) = if (isEn) "Searching anime scenes..." else "アニメシーンを特定中..."
+    fun sceneEpisode(isEn: Boolean) = if (isEn) "Episode" else "該当話数"
+    fun sceneTime(isEn: Boolean) = if (isEn) "Timestamp" else "再生位置"
+    fun sceneViewDetails(isEn: Boolean) = if (isEn) "View Work Details" else "作品詳細を見る"
+    fun sceneMatch(isEn: Boolean) = if (isEn) "Match" else "一致"
+    fun sceneOtherCandidates(isEn: Boolean) = if (isEn) "Other Matching Candidates" else "他の類似シーン候補"
+    fun scenePlayLoopVideo(isEn: Boolean) = if (isEn) "Play Loop Video" else "ループ動画を再生"
+    fun sceneStopVideo(isEn: Boolean) = if (isEn) "Stop Video" else "動画を停止"
+    fun sceneNewSearch(isEn: Boolean) = if (isEn) "New Search" else "別の画像で検索"
+    fun sceneNoMatchFound(isEn: Boolean) = if (isEn) "No matching anime scenes found." else "該当するアニメシーンが見つかりませんでした。"
+    fun sceneClipboardEmpty(isEn: Boolean) = if (isEn) "No image found in clipboard." else "クリップボードに画像が見つかりませんでした。"
+    fun sceneFootnote(isEn: Boolean) =
+        if (isEn) "Powered by trace.moe. Supports TV series, movies, and OVAs from 1950 to 2026."
+        else "trace.moe API連携。TVシリーズ、劇場版、OVA等、膨大なアニメシーンから秒単位で特定します。"
+
     private fun String.capitalizeWords(): String =
         split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
 }
+

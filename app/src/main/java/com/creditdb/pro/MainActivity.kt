@@ -34,6 +34,7 @@ import com.creditdb.pro.ui.components.ThemePaletteBottomSheet
 import com.creditdb.pro.ui.guide.GuideScreen
 import com.creditdb.pro.ui.navigation.Screen
 import com.creditdb.pro.ui.predict.PredictScreen
+import com.creditdb.pro.ui.scene.SceneSearchScreen
 import com.creditdb.pro.ui.staff.StaffDetailScreen
 import com.creditdb.pro.ui.staff.StaffScreen
 import com.creditdb.pro.ui.staff.StudioDetailScreen
@@ -310,6 +311,15 @@ fun MainApp() {
                     },
                     onNavigateToStudio = { studioName ->
                         navController.navigate(Screen.StudioDetail.createRoute(studioName))
+                    }
+                )
+            }
+
+            // タブ: シーン特定 (trace.moe)
+            composable(Screen.Scene.route) {
+                SceneSearchScreen(
+                    onNavigateToWork = { workId ->
+                        navController.navigate(Screen.WorkDetail.createRoute(workId))
                     }
                 )
             }
