@@ -26,8 +26,12 @@ data class StaffUiState(
     val debutEra: DebutEraFilter = DebutEraFilter.ALL,
     val searchQuery: String = "",
     val sortOption: StaffSortOption = StaffSortOption.RATING,
-    val hasMore: Boolean = true
-)
+    val hasMore: Boolean = true,
+    val showFilterSheet: Boolean = false
+) {
+    val hasActiveFilters: Boolean
+        get() = debutEra != DebutEraFilter.ALL || sortOption != StaffSortOption.RATING
+}
 
 class StaffViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = CreditRepository(application)
@@ -75,6 +79,21 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
     fun onSortOptionSelect(option: StaffSortOption) {
         if (_uiState.value.sortOption == option) return
         _uiState.update { it.copy(sortOption = option) }
+        fetchLeaderboard(reset = true)
+    }
+
+    fun setFilterSheetVisible(visible: Boolean) {
+        _uiState.update { it.copy(showFilterSheet = visible) }
+    }
+
+    fun resetFilters() {
+        if (_uiState.value.debutEra == DebutEraFilter.ALL && _uiState.value.sortOption == StaffSortOption.RATING) return
+        _uiState.update {
+            it.copy(
+                debutEra = DebutEraFilter.ALL,
+                sortOption = StaffSortOption.RATING
+            )
+        }
         fetchLeaderboard(reset = true)
     }
 

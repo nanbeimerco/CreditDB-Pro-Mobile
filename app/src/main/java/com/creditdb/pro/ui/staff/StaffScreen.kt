@@ -11,7 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,12 +25,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.creditdb.pro.data.DebutEraFilter
 import com.creditdb.pro.data.LeaderboardItem
 import com.creditdb.pro.data.RoleConstants
 import com.creditdb.pro.data.StaffSortOption
 import com.creditdb.pro.ui.components.DualTierBadge
 import com.creditdb.pro.ui.components.RoleBadge
 import com.creditdb.pro.ui.components.SmartSearchBar
+import com.creditdb.pro.ui.components.StaffFilterBottomSheet
 import com.creditdb.pro.ui.theme.TierTheme
 
 @Composable
@@ -69,10 +71,9 @@ fun StaffScreen(
             query = uiState.searchQuery,
             onQueryChange = viewModel::onSearchQueryChange,
             onFilterClick = {
-                val nextSort = if (uiState.sortOption == StaffSortOption.RATING) StaffSortOption.CUMULATIVE else StaffSortOption.RATING
-                viewModel.onSortOptionSelect(nextSort)
+                viewModel.setFilterSheetVisible(true)
             },
-            hasActiveFilters = uiState.sortOption == StaffSortOption.CUMULATIVE,
+            hasActiveFilters = uiState.hasActiveFilters,
             placeholder = if (isEn) com.creditdb.pro.ui.theme.AppStrings.searchPlaceholderEn else "スタッフ・声優・制作スタジオ名で検索..."
         )
 
@@ -101,31 +102,7 @@ fun StaffScreen(
             }
         }
 
-        // 2.5 初参加年代セレクター (水平スクロール)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            com.creditdb.pro.data.DebutEraFilter.entries.forEach { era ->
-                val isSelected = uiState.debutEra == era
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { viewModel.onDebutEraSelect(era) },
-                    label = {
-                        Text(
-                            text = era.getDisplayName(isEn),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                )
-            }
-        }
-
-        // 3. スリムステータスバー (件数 & ソート切り替え)
+        // 3. スリムステータスバー (件数 & 条件表示)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -152,48 +129,30 @@ fun StaffScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            var sortMenuExpanded by remember { mutableStateOf(false) }
-            Box {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { sortMenuExpanded = true }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapVert,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(
-                        text = uiState.sortOption.getDisplayName(isEn),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = sortMenuExpanded,
-                    onDismissRequest = { sortMenuExpanded = false }
-                ) {
-                    StaffSortOption.entries.forEach { opt ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = opt.getDisplayName(isEn),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (uiState.sortOption == opt) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (uiState.sortOption == opt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
-                            },
-                            onClick = {
-                                viewModel.onSortOptionSelect(opt)
-                                sortMenuExpanded = false
-                            }
-                        )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { viewModel.setFilterSheetVisible(true) }
+            ) {
+                val conditionLabel = buildString {
+                    if (uiState.debutEra != DebutEraFilter.ALL) {
+                        append(uiState.debutEra.getDisplayName(isEn))
+                        append(" · ")
                     }
+                    append(uiState.sortOption.getDisplayName(isEn))
                 }
+                Text(
+                    text = conditionLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
             }
         }
 
@@ -259,6 +218,18 @@ fun StaffScreen(
                 }
             }
         }
+    }
+
+    // フィルタ・ソート用 ModalBottomSheet
+    if (uiState.showFilterSheet) {
+        StaffFilterBottomSheet(
+            onDismiss = { viewModel.setFilterSheetVisible(false) },
+            sortOption = uiState.sortOption,
+            onSortChange = viewModel::onSortOptionSelect,
+            debutEra = uiState.debutEra,
+            onDebutEraChange = viewModel::onDebutEraSelect,
+            onReset = viewModel::resetFilters
+        )
     }
 }
 
@@ -360,20 +331,6 @@ fun CompactStaffCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (item.firstYear != null) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh
-                        ) {
-                            Text(
-                                text = if (isEn) "Debut: ${item.firstYear}" else "${item.firstYear}年〜",
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
 
                 if (!secondaryName.isNullOrBlank()) {
