@@ -735,8 +735,37 @@ class CreditRepository(private val context: Context) {
         result
     }
 
+    data class WorkScoreInfo(
+        val deviationScore: Double,
+        val tier: String,
+        val predictedScore: Double,
+        val residual: Double
+    )
+
+    fun getWorksScoresByIds(workIds: List<String>): Map<String, WorkScoreInfo> {
+        if (workIds.isEmpty()) return emptyMap()
+        val db = dbHelper.readableDatabase
+        val placeholders = workIds.map { "?" }.joinToString(",")
+        val cursor = db.rawQuery(
+            "SELECT work_id, deviation_score, tier, predicted_score, residual FROM works WHERE work_id IN ($placeholders)",
+            workIds.toTypedArray()
+        )
+        val map = mutableMapOf<String, WorkScoreInfo>()
+        while (cursor.moveToNext()) {
+            val wid = cursor.getString(0)
+            map[wid] = WorkScoreInfo(
+                deviationScore = cursor.getDouble(1),
+                tier = cursor.getString(2) ?: "B",
+                predictedScore = cursor.getDouble(3),
+                residual = cursor.getDouble(4)
+            )
+        }
+        cursor.close()
+        return map
+    }
+
     /**
-     * スタッフ詳細プロファイル取得
+     * スタッフ詳細情報の取得（総合実績 + 役職別実績 + キャリア推移 + ベスト5）
      */
     suspend fun getStaffProfile(staffName: String): StaffProfile = withContext(Dispatchers.IO) {
         val db = dbHelper.readableDatabase
@@ -744,10 +773,12 @@ class CreditRepository(private val context: Context) {
 
         val cursor = db.rawQuery(
             """
-            SELECT p.name, p.primary_role, p.total_works, p.bayesian_rating,
+            SELECT p.name, p.primary_role,
+                   COALESCE(l.works_count, p.total_works),
+                   COALESCE(l.bayesian_rating, p.bayesian_rating),
                    COALESCE(l.rating_tier, p.overall_rating_tier),
                    COALESCE(l.rating_rank, p.overall_rank),
-                   p.career_cumulative_z,
+                   COALESCE(l.career_cumulative_z, p.career_cumulative_z),
                    COALESCE(l.cumulative_tier, p.overall_cum_tier),
                    COALESCE(l.cumulative_rank, p.cumulative_rank),
                    p.all_role_stats_json,
@@ -760,7 +791,59 @@ class CreditRepository(private val context: Context) {
         )
         if (cursor.moveToFirst()) {
             try {
-                val roleStats = json.decodeFromString<List<RoleStat>>(cursor.getString(9) ?: "[]")
+                val lbRoleMap = mutableMapOf<String, RoleStat>()
+                try {
+                    val lbCursor = db.rawQuery(
+                        """
+                        SELECT role, works_count, bayesian_rating, career_cumulative_z,
+                               rating_rank, cumulative_rank, rating_tier, cumulative_tier
+                        FROM leaderboards WHERE name = ? AND role != 'all'
+                        """.trimIndent(),
+                        arrayOf(staffName)
+                    )
+                    while (lbCursor.moveToNext()) {
+                        val rKey = lbCursor.getString(0)
+                        lbRoleMap[rKey] = RoleStat(
+                            role = rKey,
+                            works_count = lbCursor.getInt(1),
+                            bayesian_rating = lbCursor.getDouble(2),
+                            career_cumulative_z = lbCursor.getDouble(3),
+                            rating_rank = lbCursor.getInt(4),
+                            cumulative_rank = lbCursor.getInt(5),
+                            role_total = 1000,
+                            rating_tier = lbCursor.getString(6),
+                            cum_tier = lbCursor.getString(7)
+                        )
+                    }
+                    lbCursor.close()
+                } catch (e: Exception) {}
+
+                val rawRoleStats = json.decodeFromString<List<RoleStat>>(cursor.getString(9) ?: "[]")
+                val seenRoles = mutableSetOf<String>()
+                val roleStats = rawRoleStats.map { r ->
+                    seenRoles.add(r.role)
+                    val live = lbRoleMap[r.role]
+                    if (live != null) {
+                        r.copy(
+                            works_count = live.works_count,
+                            bayesian_rating = live.bayesian_rating,
+                            career_cumulative_z = live.career_cumulative_z,
+                            rating_rank = live.rating_rank,
+                            cumulative_rank = live.cumulative_rank,
+                            rating_tier = live.rating_tier,
+                            cum_tier = live.cum_tier
+                        )
+                    } else {
+                        r
+                    }
+                }.toMutableList()
+
+                for ((rKey, live) in lbRoleMap) {
+                    if (!seenRoles.contains(rKey)) {
+                        roleStats.add(live)
+                    }
+                }
+
                 val rawTrajectory = json.decodeFromString<List<CareerTrajectoryItem>>(cursor.getString(10) ?: "[]")
                 val trajectory = rawTrajectory.map { item ->
                     item.copy(work_title_en = workIdToEnMap[item.work_id])

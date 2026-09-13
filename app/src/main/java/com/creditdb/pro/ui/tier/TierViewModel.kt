@@ -18,6 +18,7 @@ import com.creditdb.pro.data.CreditRepository
 import com.creditdb.pro.data.WorkItem
 import com.creditdb.pro.data.tier.*
 import com.creditdb.pro.ui.theme.LanguageManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -64,9 +66,42 @@ class TierViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadSavedConfig() {
         viewModelScope.launch {
             val loaded = TierStorageManager.loadConfig(getApplication())
-            _uiState.update { it.copy(config = loaded) }
-            preloadImagesForConfig(loaded)
+            val refreshed = withContext(Dispatchers.IO) { refreshConfigScoresFromDb(loaded) }
+            _uiState.update { it.copy(config = refreshed) }
+            preloadImagesForConfig(refreshed)
+            if (refreshed != loaded) {
+                withContext(Dispatchers.IO) {
+                    TierStorageManager.saveConfig(getApplication(), refreshed)
+                }
+            }
         }
+    }
+
+    private fun refreshConfigScoresFromDb(config: TierTableConfig): TierTableConfig {
+        val allItems = config.rows.flatMap { it.items }
+        if (allItems.isEmpty()) return config
+        val refreshedMap = repository.getWorksScoresByIds(allItems.map { it.id })
+        if (refreshedMap.isEmpty()) return config
+
+        var changed = false
+        val updatedRows = config.rows.map { row ->
+            val updatedItems = row.items.map { item ->
+                val latest = refreshedMap[item.id]
+                if (latest != null && (item.deviationScore != latest.deviationScore || item.tier != latest.tier)) {
+                    changed = true
+                    item.copy(
+                        deviationScore = latest.deviationScore,
+                        tier = latest.tier,
+                        predictedScore = latest.predictedScore,
+                        residual = latest.residual
+                    )
+                } else {
+                    item
+                }
+            }
+            row.copy(items = updatedItems)
+        }
+        return if (changed) config.copy(rows = updatedRows) else config
     }
 
     private fun persistConfig(newConfig: TierTableConfig) {
