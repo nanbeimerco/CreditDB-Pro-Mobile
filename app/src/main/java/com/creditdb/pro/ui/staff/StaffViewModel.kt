@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.creditdb.pro.data.CreditRepository
+import com.creditdb.pro.data.DebutEraFilter
 import com.creditdb.pro.data.LeaderboardItem
 import com.creditdb.pro.data.StaffSortOption
 import com.creditdb.pro.data.SummaryInfo
@@ -22,6 +23,7 @@ data class StaffUiState(
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false,
     val selectedRole: String = "all",
+    val debutEra: DebutEraFilter = DebutEraFilter.ALL,
     val searchQuery: String = "",
     val sortOption: StaffSortOption = StaffSortOption.RATING,
     val hasMore: Boolean = true
@@ -52,6 +54,12 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
     fun onRoleSelect(role: String) {
         if (_uiState.value.selectedRole == role) return
         _uiState.update { it.copy(selectedRole = role) }
+        fetchLeaderboard(reset = true)
+    }
+
+    fun onDebutEraSelect(era: DebutEraFilter) {
+        if (_uiState.value.debutEra == era) return
+        _uiState.update { it.copy(debutEra = era) }
         fetchLeaderboard(reset = true)
     }
 
@@ -92,13 +100,17 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
                     query = state.searchQuery,
                     sortOption = state.sortOption,
                     limit = pageSize,
-                    offset = currentOffset
+                    offset = currentOffset,
+                    debutMin = state.debutEra.minYear,
+                    debutMax = state.debutEra.maxYear
                 )
 
                 val total = if (reset) {
                     repository.getLeaderboardCount(
                         role = state.selectedRole,
-                        query = state.searchQuery
+                        query = state.searchQuery,
+                        debutMin = state.debutEra.minYear,
+                        debutMax = state.debutEra.maxYear
                     )
                 } else {
                     state.totalCount

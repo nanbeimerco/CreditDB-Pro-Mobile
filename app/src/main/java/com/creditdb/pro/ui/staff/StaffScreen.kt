@@ -101,6 +101,30 @@ fun StaffScreen(
             }
         }
 
+        // 2.5 初参加年代セレクター (水平スクロール)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            com.creditdb.pro.data.DebutEraFilter.entries.forEach { era ->
+                val isSelected = uiState.debutEra == era
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { viewModel.onDebutEraSelect(era) },
+                    label = {
+                        Text(
+                            text = era.getDisplayName(isEn),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                )
+            }
+        }
+
         // 3. スリムステータスバー (件数 & ソート切り替え)
         Row(
             modifier = Modifier
@@ -128,13 +152,11 @@ fun StaffScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            if (uiState.selectedRole != "studio") {
+            var sortMenuExpanded by remember { mutableStateOf(false) }
+            Box {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable {
-                        val nextSort = if (uiState.sortOption == StaffSortOption.RATING) StaffSortOption.CUMULATIVE else StaffSortOption.RATING
-                        viewModel.onSortOptionSelect(nextSort)
-                    }
+                    modifier = Modifier.clickable { sortMenuExpanded = true }
                 ) {
                     Icon(
                         imageVector = Icons.Default.SwapVert,
@@ -149,6 +171,28 @@ fun StaffScreen(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
+                }
+
+                DropdownMenu(
+                    expanded = sortMenuExpanded,
+                    onDismissRequest = { sortMenuExpanded = false }
+                ) {
+                    StaffSortOption.entries.forEach { opt ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = opt.getDisplayName(isEn),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (uiState.sortOption == opt) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (uiState.sortOption == opt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            },
+                            onClick = {
+                                viewModel.onSortOptionSelect(opt)
+                                sortMenuExpanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -316,6 +360,20 @@ fun CompactStaffCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (item.firstYear != null) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Text(
+                                text = if (isEn) "Debut: ${item.firstYear}" else "${item.firstYear}年〜",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
 
                 if (!secondaryName.isNullOrBlank()) {

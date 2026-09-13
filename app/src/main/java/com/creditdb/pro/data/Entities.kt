@@ -210,7 +210,9 @@ data class LeaderboardItem(
     val bestWorkYear: Int?,
     val bestWorkZ: Double?,
     val topCharacter: String? = null,
-    val bestWorkTitleEn: String? = null
+    val bestWorkTitleEn: String? = null,
+    val firstYear: Int? = null,
+    val latestYear: Int? = null
 ) {
     fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String {
         return if (role == "studio") {
@@ -386,13 +388,43 @@ enum class WorksSortOption(val label: String) {
 
 enum class StaffSortOption(val label: String) {
     RATING("総合実力 S(a) 順"),
-    CUMULATIVE("生涯累積実績 ΣZ 順");
+    CUMULATIVE("生涯累積実績 ΣZ 順"),
+    NEWEST_DEBUT("初参加年 (新しい順 / 若手・新世代)"),
+    OLDEST_DEBUT("初参加年 (古い順 / ベテラン)"),
+    WORKS_COUNT("参加作品数 (多い順)");
 
     fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String {
         return if (isEn) {
             when (this) {
                 RATING -> "Power Score S(a)"
                 CUMULATIVE -> "Cumulative ΣZ"
+                NEWEST_DEBUT -> "Debut Era (Newest / Rising)"
+                OLDEST_DEBUT -> "Debut Era (Oldest / Veterans)"
+                WORKS_COUNT -> "Works Count"
+            }
+        } else {
+            label
+        }
+    }
+}
+
+enum class DebutEraFilter(val label: String, val minYear: Int?, val maxYear: Int?) {
+    ALL("全年代", null, null),
+    ERA_2020S("2020年代〜 (新世代)", 2020, null),
+    ERA_2015_PLUS("2015年〜 (新鋭・中堅)", 2015, null),
+    ERA_2010S("2010年代", 2010, 2019),
+    ERA_2000S("2000年代", 2000, 2009),
+    PRE_2000("1990年代以前", null, 1999);
+
+    fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String {
+        return if (isEn) {
+            when (this) {
+                ALL -> "All Eras"
+                ERA_2020S -> "2020s~ (New Gen)"
+                ERA_2015_PLUS -> "2015+ (Mid & Rising)"
+                ERA_2010S -> "2010s"
+                ERA_2000S -> "2000s"
+                PRE_2000 -> "Pre-2000s"
             }
         } else {
             label
