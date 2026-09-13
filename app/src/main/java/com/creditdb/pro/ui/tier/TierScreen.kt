@@ -394,21 +394,21 @@ private suspend fun createTierBoardBitmap(
 
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
 
-    // Load Gotham fonts
-    val gothamBold: android.graphics.Typeface? = try {
-        androidx.core.content.res.ResourcesCompat.getFont(context, com.creditdb.pro.R.font.gotham_bold)
+    // Load Montserrat fonts
+    val montserratBold: android.graphics.Typeface? = try {
+        androidx.core.content.res.ResourcesCompat.getFont(context, com.creditdb.pro.R.font.montserrat_bold)
     } catch (e: Exception) {
         null
     }
-    val gothamBook: android.graphics.Typeface? = try {
-        androidx.core.content.res.ResourcesCompat.getFont(context, com.creditdb.pro.R.font.gotham_book)
+    val montserratRegular: android.graphics.Typeface? = try {
+        androidx.core.content.res.ResourcesCompat.getFont(context, com.creditdb.pro.R.font.montserrat_regular)
     } catch (e: Exception) {
         null
     }
 
-    // 1. ウォーターマーク (右上: CreditDB のみ、フォントは GOTHAM Bold)
+    // 1. ウォーターマーク (右上: CreditDB のみ、フォントは Montserrat Bold)
     paint.color = android.graphics.Color.WHITE
-    paint.typeface = gothamBold ?: android.graphics.Typeface.DEFAULT_BOLD
+    paint.typeface = montserratBold ?: android.graphics.Typeface.DEFAULT_BOLD
     paint.textSize = 24f * s
     paint.isFakeBoldText = true
     paint.textAlign = android.graphics.Paint.Align.RIGHT
@@ -438,9 +438,9 @@ private suspend fun createTierBoardBitmap(
         canvas.drawRoundRect(margin, currentY, margin + headerBoxWidth, currentY + thisRowHeight, 14f * s, 14f * s, paint)
         canvas.drawRect(margin + headerBoxWidth - 16f * s, currentY, margin + headerBoxWidth, currentY + thisRowHeight, paint)
 
-        // Tier文字: 背景色に対して視認性の高い黒色 (#121218) ＆ GOTHAM Bold (行の中央にセンタリング)
+        // Tier文字: 背景色に対して視認性の高い黒色 (#121218) ＆ Montserrat Bold (行の中央にセンタリング)
         paint.color = android.graphics.Color.parseColor("#121218")
-        paint.typeface = gothamBold ?: android.graphics.Typeface.DEFAULT_BOLD
+        paint.typeface = montserratBold ?: android.graphics.Typeface.DEFAULT_BOLD
         paint.textSize = if (row.name.length > 2) 26f * s else 38f * s
         paint.isFakeBoldText = true
         paint.textAlign = android.graphics.Paint.Align.CENTER
@@ -528,7 +528,7 @@ private suspend fun createTierBoardBitmap(
                 canvas.drawRoundRect(badgeRect, 4f * s, 4f * s, paint)
 
                 paint.color = android.graphics.Color.parseColor("#121218")
-                paint.typeface = gothamBold ?: android.graphics.Typeface.DEFAULT_BOLD
+                paint.typeface = montserratBold ?: android.graphics.Typeface.DEFAULT_BOLD
                 paint.textSize = 10.5f * s
                 paint.isFakeBoldText = true
                 paint.textAlign = android.graphics.Paint.Align.CENTER
@@ -555,9 +555,9 @@ private suspend fun createTierBoardBitmap(
                     canvas.drawText(line1, cardRect.left + 5f * s, cardRect.bottom - 15f * s, paint)
                 }
 
-                // 年代: 常に GOTHAM フォントで描画
+                // 年代: 常に Montserrat フォントで描画
                 paint.color = android.graphics.Color.parseColor("#A4A4B4")
-                paint.typeface = gothamBold ?: android.graphics.Typeface.DEFAULT_BOLD
+                paint.typeface = montserratBold ?: android.graphics.Typeface.DEFAULT_BOLD
                 paint.textSize = 9.5f * s
                 canvas.drawText("${item.year}", cardRect.left + 5f * s, cardRect.bottom - 4f * s, paint)
             } else if (options.showTitle) {
@@ -573,9 +573,9 @@ private suspend fun createTierBoardBitmap(
                     canvas.drawText(line1, cardRect.left + 5f * s, cardRect.bottom - 7f * s, paint)
                 }
             } else if (options.showYear) {
-                // 年代のみ: 常に GOTHAM フォントで描画
+                // 年代のみ: 常に Montserrat フォントで描画
                 paint.color = android.graphics.Color.parseColor("#D0D0E0")
-                paint.typeface = gothamBold ?: android.graphics.Typeface.DEFAULT_BOLD
+                paint.typeface = montserratBold ?: android.graphics.Typeface.DEFAULT_BOLD
                 paint.textSize = 10.5f * s
                 canvas.drawText("${item.year}", cardRect.left + 5f * s, cardRect.bottom - 6f * s, paint)
             } else if (coverBitmap == null) {
