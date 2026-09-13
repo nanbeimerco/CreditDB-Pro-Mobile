@@ -747,6 +747,15 @@ fun DatabaseUpdateDialog(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    thickness = 0.8.dp
+                )
+                Text(
+                    text = com.creditdb.pro.ui.theme.AppStrings.datasetAttribution(isEn),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
         },
         confirmButton = {

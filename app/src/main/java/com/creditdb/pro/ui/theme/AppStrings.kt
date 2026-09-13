@@ -397,6 +397,36 @@ object AppStrings {
         if (isEn) "Powered by trace.moe. Supports TV series, movies, and OVAs from 1950 to 2026."
         else "trace.moe API連携。TVシリーズ、劇場版、OVA等、膨大なアニメシーンから秒単位で特定します。"
 
+    // --- データソース & API クレジット ---
+    fun guideSection4Title(isEn: Boolean) =
+        if (isEn) "Data Sources & API Credits" else "データソースとAPIクレジット"
+
+    fun dataSourceIntro(isEn: Boolean) =
+        if (isEn) "CreditDB integrates publicly accessible open APIs to construct its standardized anime catalog and hierarchical production credit database."
+        else "CreditDB では、オープンに公開されている高品質なAPI基盤を活用し、作品メタデータおよび詳細な制作クレジットを収集・構造化しています。"
+
+    fun anilistTitle(isEn: Boolean) = "AniList API (GraphQL)"
+    fun anilistRole(isEn: Boolean) =
+        if (isEn) "Source for anime catalog metadata (titles, release years, episode counts, cover artwork) and global community weighted user ratings (AniList Raw Score)."
+        else "全世界のアニメ作品基本情報（タイトル、放映年、エピソード数、公式カバー画像）および海外レビュー加重平均スコア（AniList素点）の提供元。"
+
+    fun bangumiTitle(isEn: Boolean) = "Bangumi API (番組計画)"
+    fun bangumiRole(isEn: Boolean) =
+        if (isEn) "Source for detailed Japanese animation production staff credits (directors, series composition, character designers, animation directors, key animators, art directors, sound, music, and voice cast)."
+        else "日本国内アニメーションの詳細な制作陣クレジット（監督、シリーズ構成、キャラクターデザイン、演出、作画監督、原画、美術、音楽、キャスト声優等の階層クレジットデータ）の提供元。"
+
+    fun creditAcknowledgement(isEn: Boolean) =
+        if (isEn) "We express our deepest gratitude to AniList and Bangumi, their developer communities, and the global contributors who continuously maintain these invaluable open databases for anime culture."
+        else "膨大なアニメーション文化の記録をオープンなデータベース・APIとして公開・維持されている AniList および Bangumi の運営陣ならびにコントリビューターの皆様に深く敬意と感謝を表します。"
+
+    fun workDetailDataFooter(isEn: Boolean) =
+        if (isEn) "Data: AniList API (Metadata & Scores) · Bangumi API (Credits)"
+        else "データ提供: AniList API（作品情報・海外評価） · Bangumi API（制作クレジット）"
+
+    fun datasetAttribution(isEn: Boolean) =
+        if (isEn) "Dataset: AniList API & Bangumi API"
+        else "データ提供: AniList API · Bangumi API"
+
     private fun String.capitalizeWords(): String =
         split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
 }
