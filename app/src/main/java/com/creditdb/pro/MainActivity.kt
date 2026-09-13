@@ -390,6 +390,9 @@ fun MainApp() {
                     onBackClick = { navController.popBackStack() },
                     onWorkClick = { workId ->
                         navController.navigate(Screen.WorkDetail.createRoute(workId))
+                    },
+                    onStaffClick = { staffName ->
+                        navController.navigate(Screen.StaffDetail.createRoute(staffName))
                     }
                 )
             }
