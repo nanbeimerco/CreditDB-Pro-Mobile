@@ -409,6 +409,23 @@ fun WorkDetailScreen(
                         }
                     }
                 }
+
+                // 5. データソース・クレジット表記（最下部フッター）
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = com.creditdb.pro.ui.theme.AppStrings.workDetailDataFooter(isEn),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
             }
         }
     }
