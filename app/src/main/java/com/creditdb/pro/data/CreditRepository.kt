@@ -1470,4 +1470,183 @@ class CreditRepository(private val context: Context) {
         }
     }
 
+    private val studioStaffCache = java.util.concurrent.ConcurrentHashMap<String, List<StudioStaffMember>>()
+
+    /**
+     * 特定スタジオの主要アニメーター・制作陣を取得
+     * 役職ごとの重み付けスコア、参加作品数、役職内訳、Tierバッジ、代表作をオンデマンド集計
+     */
+    suspend fun getStudioStaff(studioName: String): List<StudioStaffMember> = withContext(Dispatchers.IO) {
+        studioStaffCache[studioName]?.let { return@withContext it }
+        try {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery(
+                """
+                SELECT work_id, title, year, deviation_score, staff_json, characters_json
+                FROM works
+                WHERE work_id IN (SELECT work_id FROM studio_works WHERE studio_name = ?)
+                """.trimIndent(),
+                arrayOf(studioName)
+            )
+
+            val roleWeights = mapOf(
+                "director" to 4.0,
+                "series_comp" to 3.0,
+                "char_design" to 3.0,
+                "sakkan" to 2.0,
+                "unit_director" to 2.0,
+                "art_dir" to 1.5,
+                "music" to 1.5,
+                "genga" to 1.0,
+                "cv" to 0.8
+            )
+
+            class TempData(
+                val name: String,
+                var weightedScore: Double = 0.0,
+                val rolesBreakdown: MutableMap<String, Int> = mutableMapOf(),
+                val distinctWorks: MutableSet<String> = mutableSetOf(),
+                val worksList: MutableList<Triple<String, Int, Double>> = mutableListOf(),
+                var firstYear: Int = 9999,
+                var lastYear: Int = 0
+            )
+
+            val staffMap = mutableMapOf<String, TempData>()
+
+            while (cursor.moveToNext()) {
+                val wid = cursor.getString(0)
+                val title = cursor.getString(1)
+                val year = cursor.getInt(2)
+                val score = cursor.getDouble(3)
+                val staffJson = cursor.getString(4) ?: ""
+                val charsJson = cursor.getString(5) ?: ""
+
+                if (staffJson.isNotBlank()) {
+                    try {
+                        val root = org.json.JSONObject(staffJson)
+                        val keys = root.keys()
+                        while (keys.hasNext()) {
+                            val role = keys.next()
+                            if (role == "studio") continue
+                            val weight = roleWeights[role] ?: 0.5
+                            val arr = root.optJSONArray(role)
+                            if (arr != null) {
+                                for (i in 0 until arr.length()) {
+                                    val obj = arr.optJSONObject(i)
+                                    val mName = obj?.optString("name") ?: arr.optString(i)
+                                    val cleanName = mName.trim()
+                                    if (cleanName.isBlank()) continue
+
+                                    val data = staffMap.getOrPut(cleanName) {
+                                        TempData(name = cleanName)
+                                    }
+                                    data.weightedScore += weight
+                                    data.rolesBreakdown[role] = (data.rolesBreakdown[role] ?: 0) + 1
+                                    data.distinctWorks.add(wid)
+                                    data.worksList.add(Triple(title, year, score))
+                                    if (year > 0) {
+                                        if (year < data.firstYear) data.firstYear = year
+                                        if (year > data.lastYear) data.lastYear = year
+                                    }
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (charsJson.isNotBlank()) {
+                    try {
+                        val arr = org.json.JSONArray(charsJson)
+                        val weight = roleWeights["cv"] ?: 0.8
+                        for (i in 0 until arr.length()) {
+                            val obj = arr.optJSONObject(i)
+                            val aName = obj?.optString("actor_name") ?: obj?.optString("actor") ?: ""
+                            val cleanName = aName.trim()
+                            if (cleanName.isBlank()) continue
+
+                            val data = staffMap.getOrPut(cleanName) {
+                                TempData(name = cleanName)
+                            }
+                            data.weightedScore += weight
+                            data.rolesBreakdown["cv"] = (data.rolesBreakdown["cv"] ?: 0) + 1
+                            data.distinctWorks.add(wid)
+                            data.worksList.add(Triple(title, year, score))
+                            if (year > 0) {
+                                if (year < data.firstYear) data.firstYear = year
+                                if (year > data.lastYear) data.lastYear = year
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+            }
+            cursor.close()
+
+            if (staffMap.isEmpty()) return@withContext emptyList()
+
+            // Leaderboards から Tier を一括取得
+            val allNames = staffMap.keys.toList()
+            val tierMap = mutableMapOf<String, Pair<String, String>>()
+            val chunkSize = 300
+            for (i in allNames.indices step chunkSize) {
+                val chunk = allNames.subList(i, minOf(i + chunkSize, allNames.size))
+                val ph = chunk.joinToString(",") { "?" }
+                val lbCursor = db.rawQuery(
+                    "SELECT name, rating_tier, cumulative_tier FROM leaderboards WHERE role = 'all' AND name IN ($ph)",
+                    chunk.toTypedArray()
+                )
+                while (lbCursor.moveToNext()) {
+                    val n = lbCursor.getString(0)
+                    val rt = lbCursor.getString(1) ?: "B"
+                    val ct = lbCursor.getString(2) ?: "B"
+                    tierMap[n] = rt to ct
+                }
+                lbCursor.close()
+            }
+
+            val result = mutableListOf<StudioStaffMember>()
+            for ((name, data) in staffMap) {
+                val tiers = tierMap[name]
+
+                // 主な役職を重み順・回数順にソート
+                val sortedRoles = data.rolesBreakdown.entries
+                    .sortedWith(compareByDescending<Map.Entry<String, Int>> { (roleWeights[it.key] ?: 0.5) * it.value }
+                        .thenByDescending { it.value })
+                    .map { it.key }
+
+                // 代表作 (最高偏差値順に重複を除いて最大3作)
+                val seenTitles = mutableSetOf<String>()
+                val sampleWorks = mutableListOf<String>()
+                val sortedWorks = data.worksList.sortedByDescending { it.third }
+                for (w in sortedWorks) {
+                    if (seenTitles.add(w.first)) {
+                        sampleWorks.add(w.first)
+                        if (sampleWorks.size >= 3) break
+                    }
+                }
+
+                result.add(
+                    StudioStaffMember(
+                        name = name,
+                        totalWorks = data.distinctWorks.size,
+                        weightedScore = Math.round(data.weightedScore * 10.0) / 10.0,
+                        rolesBreakdown = data.rolesBreakdown,
+                        primaryRoles = sortedRoles,
+                        ratingTier = tiers?.first,
+                        cumulativeTier = tiers?.second,
+                        sampleWorks = sampleWorks,
+                        firstYear = if (data.firstYear < 9999) data.firstYear else null,
+                        lastYear = if (data.lastYear > 0) data.lastYear else null
+                    )
+                )
+            }
+
+            result.sortByDescending { it.weightedScore }
+            studioStaffCache[studioName] = result
+            result
+        } catch (e: Exception) {
+            android.util.Log.e("CreditRepository", "Failed to get studio staff for $studioName", e)
+            emptyList()
+        }
+    }
 }
+

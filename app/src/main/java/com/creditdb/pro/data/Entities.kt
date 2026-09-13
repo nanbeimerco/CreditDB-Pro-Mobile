@@ -196,6 +196,29 @@ data class StudioWorkItem(
     }
 }
 
+data class StudioStaffMember(
+    val name: String,
+    val totalWorks: Int,
+    val weightedScore: Double,
+    val rolesBreakdown: Map<String, Int>,
+    val primaryRoles: List<String>,
+    val ratingTier: String? = null,
+    val cumulativeTier: String? = null,
+    val sampleWorks: List<String> = emptyList(),
+    val firstYear: Int? = null,
+    val lastYear: Int? = null
+) {
+    fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): Pair<String, String?> {
+        val en = StaffNameResolver.getStaffName(name, true)
+        return if (isEn) {
+            en to (name.takeIf { it != en })
+        } else {
+            name to (en.takeIf { it != name })
+        }
+    }
+}
+
+
 data class LeaderboardItem(
     val role: String,
     val name: String,
