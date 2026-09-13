@@ -352,7 +352,9 @@ class CreditRepository(private val context: Context) {
         query: String = "",
         sortOption: StaffSortOption = StaffSortOption.RATING,
         limit: Int = 50,
-        offset: Int = 0
+        offset: Int = 0,
+        debutMin: Int? = null,
+        debutMax: Int? = null
     ): List<LeaderboardItem> = withContext(Dispatchers.IO) {
         val db = dbHelper.readableDatabase
         val (_, titleToEnMap) = getWorkTitleEnMaps(db)
@@ -362,6 +364,14 @@ class CreditRepository(private val context: Context) {
             try {
                 val conditions = mutableListOf<String>()
                 val args = mutableListOf<String>()
+                if (debutMin != null && debutMin > 0) {
+                    conditions.add("first_year >= ?")
+                    args.add(debutMin.toString())
+                }
+                if (debutMax != null && debutMax > 0) {
+                    conditions.add("first_year <= ?")
+                    args.add(debutMax.toString())
+                }
                 if (query.isNotBlank()) {
                     val qNorm = TextNormalizer.normalize(query)
                     val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
@@ -377,9 +387,15 @@ class CreditRepository(private val context: Context) {
                     }
                 }
                 val whereClause = if (conditions.isNotEmpty()) "WHERE " + conditions.joinToString(" AND ") else ""
+                val studioOrder = when (sortOption) {
+                    StaffSortOption.NEWEST_DEBUT -> "ORDER BY CASE WHEN first_year IS NULL THEN 1 ELSE 0 END, first_year DESC, works_count DESC"
+                    StaffSortOption.OLDEST_DEBUT -> "ORDER BY CASE WHEN first_year IS NULL THEN 1 ELSE 0 END, first_year ASC, works_count DESC"
+                    else -> "ORDER BY works_count DESC"
+                }
+
                 val sql = """
-                    SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier
-                    FROM studios $whereClause ORDER BY works_count DESC LIMIT ? OFFSET ?
+                    SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier, first_year, latest_year
+                    FROM studios $whereClause $studioOrder LIMIT ? OFFSET ?
                 """.trimIndent()
                 args.add(limit.toString())
                 args.add(offset.toString())
@@ -403,7 +419,9 @@ class CreditRepository(private val context: Context) {
                             bestWorkTitle = bwTitle,
                             bestWorkTitleEn = titleToEnMap[bwTitle],
                             bestWorkYear = cursor.getInt(3).takeIf { it > 0 },
-                            bestWorkZ = cursor.getDouble(4).takeIf { !cursor.isNull(4) }
+                            bestWorkZ = cursor.getDouble(4).takeIf { !cursor.isNull(4) },
+                            firstYear = cursor.getInt(6).takeIf { !cursor.isNull(6) && it > 0 },
+                            latestYear = cursor.getInt(7).takeIf { !cursor.isNull(7) && it > 0 }
                         )
                     )
                     rank++
@@ -418,7 +436,7 @@ class CreditRepository(private val context: Context) {
 
         // 全役職で検索クエリがある場合、マッチするスタジオを先頭に統合
         val matchedStudios = mutableListOf<LeaderboardItem>()
-        if (role == "all" && query.isNotBlank() && offset == 0) {
+        if (role == "all" && query.isNotBlank() && offset == 0 && debutMin == null && debutMax == null) {
             try {
                 val qNorm = TextNormalizer.normalize(query)
                 val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
@@ -435,7 +453,7 @@ class CreditRepository(private val context: Context) {
                     stArgs.add("%$qNorm%")
                 }
                 val stCursor = db.rawQuery(
-                    "SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier FROM studios WHERE ${stConditions.joinToString(" AND ")} ORDER BY works_count DESC LIMIT 3",
+                    "SELECT name, works_count, best_work_title, best_work_year, best_work_dev, best_work_tier, first_year, latest_year FROM studios WHERE ${stConditions.joinToString(" AND ")} ORDER BY works_count DESC LIMIT 3",
                     stArgs.toTypedArray()
                 )
                 while (stCursor.moveToNext()) {
@@ -454,7 +472,9 @@ class CreditRepository(private val context: Context) {
                             bestWorkTitle = bwTitle,
                             bestWorkTitleEn = titleToEnMap[bwTitle],
                             bestWorkYear = stCursor.getInt(3).takeIf { it > 0 },
-                            bestWorkZ = stCursor.getDouble(4).takeIf { !stCursor.isNull(4) }
+                            bestWorkZ = stCursor.getDouble(4).takeIf { !stCursor.isNull(4) },
+                            firstYear = stCursor.getInt(6).takeIf { !stCursor.isNull(6) && it > 0 },
+                            latestYear = stCursor.getInt(7).takeIf { !stCursor.isNull(7) && it > 0 }
                         )
                     )
                 }
@@ -470,6 +490,15 @@ class CreditRepository(private val context: Context) {
 
         conditions.add("role = ?")
         args.add(role)
+
+        if (debutMin != null && debutMin > 0) {
+            conditions.add("first_year >= ?")
+            args.add(debutMin.toString())
+        }
+        if (debutMax != null && debutMax > 0) {
+            conditions.add("first_year <= ?")
+            args.add(debutMax.toString())
+        }
 
         if (query.isNotBlank()) {
             val qNorm = TextNormalizer.normalize(query)
@@ -490,12 +519,16 @@ class CreditRepository(private val context: Context) {
         val orderClause = when (sortOption) {
             StaffSortOption.RATING -> "ORDER BY rating_rank ASC"
             StaffSortOption.CUMULATIVE -> "ORDER BY cumulative_rank ASC"
+            StaffSortOption.NEWEST_DEBUT -> "ORDER BY CASE WHEN first_year IS NULL THEN 1 ELSE 0 END, first_year DESC, rating_rank ASC"
+            StaffSortOption.OLDEST_DEBUT -> "ORDER BY CASE WHEN first_year IS NULL THEN 1 ELSE 0 END, first_year ASC, rating_rank ASC"
+            StaffSortOption.WORKS_COUNT -> "ORDER BY works_count DESC, rating_rank ASC"
         }
 
         val sql = """
             SELECT role, name, works_count, bayesian_rating, career_cumulative_z,
                    rating_rank, cumulative_rank, rating_tier, cumulative_tier,
-                   best_work_title, best_work_year, best_work_z, top_character
+                   best_work_title, best_work_year, best_work_z, top_character,
+                   first_year, latest_year
             FROM leaderboards $whereClause $orderClause LIMIT ? OFFSET ?
         """.trimIndent()
         args.add(limit.toString())
@@ -520,7 +553,9 @@ class CreditRepository(private val context: Context) {
                     bestWorkTitleEn = titleToEnMap[bwTitle],
                     bestWorkYear = cursor.getInt(10).takeIf { it > 0 },
                     bestWorkZ = cursor.getDouble(11).takeIf { !cursor.isNull(11) },
-                    topCharacter = cursor.getString(12)?.takeIf { it.isNotBlank() }
+                    topCharacter = cursor.getString(12)?.takeIf { it.isNotBlank() },
+                    firstYear = cursor.getInt(13).takeIf { !cursor.isNull(13) && it > 0 },
+                    latestYear = cursor.getInt(14).takeIf { !cursor.isNull(14) && it > 0 }
                 )
             )
         }
@@ -530,7 +565,9 @@ class CreditRepository(private val context: Context) {
 
     suspend fun getLeaderboardCount(
         role: String = "all",
-        query: String = ""
+        query: String = "",
+        debutMin: Int? = null,
+        debutMax: Int? = null
     ): Int = withContext(Dispatchers.IO) {
         val db = dbHelper.readableDatabase
 
@@ -538,6 +575,14 @@ class CreditRepository(private val context: Context) {
             try {
                 val conditions = mutableListOf<String>()
                 val args = mutableListOf<String>()
+                if (debutMin != null && debutMin > 0) {
+                    conditions.add("first_year >= ?")
+                    args.add(debutMin.toString())
+                }
+                if (debutMax != null && debutMax > 0) {
+                    conditions.add("first_year <= ?")
+                    args.add(debutMax.toString())
+                }
                 if (query.isNotBlank()) {
                     val qNorm = TextNormalizer.normalize(query)
                     val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
@@ -572,6 +617,15 @@ class CreditRepository(private val context: Context) {
 
         conditions.add("role = ?")
         args.add(role)
+
+        if (debutMin != null && debutMin > 0) {
+            conditions.add("first_year >= ?")
+            args.add(debutMin.toString())
+        }
+        if (debutMax != null && debutMax > 0) {
+            conditions.add("first_year <= ?")
+            args.add(debutMax.toString())
+        }
 
         if (query.isNotBlank()) {
             val qNorm = TextNormalizer.normalize(query)
