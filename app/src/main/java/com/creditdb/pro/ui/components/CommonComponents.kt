@@ -28,8 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.creditdb.pro.data.DebutEraFilter
 import com.creditdb.pro.data.RoleConstants
 import com.creditdb.pro.data.RoleDefinitions
+import com.creditdb.pro.data.StaffSortOption
 import com.creditdb.pro.data.WorksSortOption
 import com.creditdb.pro.ui.theme.*
 
@@ -549,6 +551,117 @@ fun WorkFilterBottomSheet(
                         selected = eraFilter == key,
                         onClick = { onEraChange(key) },
                         label = { Text(label) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(if (isEn) "Apply & Close" else "適用して閉じる", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/**
+ * スタッフ一覧のソート & 初参加年代絞込ボトムシート
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun StaffFilterBottomSheet(
+    onDismiss: () -> Unit,
+    sortOption: StaffSortOption,
+    onSortChange: (StaffSortOption) -> Unit,
+    debutEra: DebutEraFilter,
+    onDebutEraChange: (DebutEraFilter) -> Unit,
+    onReset: () -> Unit
+) {
+    val isEn = LanguageManager.isEnglish
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isEn) "Filter & Sort Creators" else "スタッフ絞込 & 並び替え",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onReset) {
+                    Text(if (isEn) "Reset" else "リセット", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            // 1. ソート順
+            Text(
+                text = if (isEn) "Sort Criteria" else "並び替え基準",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold
+            )
+            val availableSorts = listOf(
+                StaffSortOption.RATING,
+                StaffSortOption.CUMULATIVE,
+                StaffSortOption.NEWEST_DEBUT,
+                StaffSortOption.OLDEST_DEBUT,
+                StaffSortOption.WORKS_COUNT
+            )
+
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                availableSorts.forEach { opt ->
+                    FilterChip(
+                        selected = sortOption == opt,
+                        onClick = { onSortChange(opt) },
+                        label = { Text(opt.getDisplayName(isEn)) }
+                    )
+                }
+            }
+
+            // 2. 初参加年代
+            Text(
+                text = if (isEn) "Debut Era" else "初参加年代",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold
+            )
+            val availableEras = listOf(
+                DebutEraFilter.ALL,
+                DebutEraFilter.ERA_2020S,
+                DebutEraFilter.ERA_2015_2019,
+                DebutEraFilter.ERA_2010S,
+                DebutEraFilter.ERA_2000S,
+                DebutEraFilter.PRE_2000
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                availableEras.forEach { era ->
+                    FilterChip(
+                        selected = debutEra == era,
+                        onClick = { onDebutEraChange(era) },
+                        label = { Text(era.getDisplayName(isEn)) }
                     )
                 }
             }

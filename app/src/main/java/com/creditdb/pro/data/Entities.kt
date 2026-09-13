@@ -434,7 +434,7 @@ enum class StaffSortOption(val label: String) {
 enum class DebutEraFilter(val label: String, val minYear: Int?, val maxYear: Int?) {
     ALL("全年代", null, null),
     ERA_2020S("2020年代〜", 2020, null),
-    ERA_2015_PLUS("2015年〜", 2015, null),
+    ERA_2015_2019("2015〜2019年", 2015, 2019),
     ERA_2010S("2010年代", 2010, 2019),
     ERA_2000S("2000年代", 2000, 2009),
     PRE_2000("1990年代以前", null, 1999);
@@ -444,7 +444,7 @@ enum class DebutEraFilter(val label: String, val minYear: Int?, val maxYear: Int
             when (this) {
                 ALL -> "All Eras"
                 ERA_2020S -> "2020s~"
-                ERA_2015_PLUS -> "2015+"
+                ERA_2015_2019 -> "2015–2019"
                 ERA_2010S -> "2010s"
                 ERA_2000S -> "2000s"
                 PRE_2000 -> "Pre-2000s"
