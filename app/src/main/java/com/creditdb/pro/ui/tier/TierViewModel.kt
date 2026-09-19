@@ -81,23 +81,29 @@ class TierViewModel(application: Application) : AndroidViewModel(application) {
         val allItems = config.rows.flatMap { it.items }
         if (allItems.isEmpty()) return config
         val refreshedMap = repository.getWorksScoresByIds(allItems.map { it.id })
-        if (refreshedMap.isEmpty()) return config
 
         var changed = false
         val updatedRows = config.rows.map { row ->
             val updatedItems = row.items.map { item ->
+                var currentItem = item
                 val latest = refreshedMap[item.id]
                 if (latest != null && (item.deviationScore != latest.deviationScore || item.tier != latest.tier)) {
                     changed = true
-                    item.copy(
+                    currentItem = currentItem.copy(
                         deviationScore = latest.deviationScore,
                         tier = latest.tier,
                         predictedScore = latest.predictedScore,
                         residual = latest.residual
                     )
-                } else {
-                    item
                 }
+                if (currentItem.imageUrl.isNullOrBlank()) {
+                    val coverUrl = WorkImageResolver.getCoverImageUrl(currentItem.id, getApplication())
+                    if (!coverUrl.isNullOrBlank()) {
+                        changed = true
+                        currentItem = currentItem.copy(imageUrl = coverUrl)
+                    }
+                }
+                currentItem
             }
             row.copy(items = updatedItems)
         }

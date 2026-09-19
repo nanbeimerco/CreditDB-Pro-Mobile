@@ -29,8 +29,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.creditdb.pro.data.tier.WorkImageResolver
 import com.creditdb.pro.ui.theme.AppStrings
 import com.creditdb.pro.ui.theme.LanguageManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -358,6 +363,24 @@ private fun splitTitleForCard(
     return Pair(line1, line2)
 }
 
+private fun drawableToBitmap(drawable: android.graphics.drawable.Drawable?): Bitmap? {
+    if (drawable == null) return null
+    if (drawable is android.graphics.drawable.BitmapDrawable) {
+        return drawable.bitmap
+    }
+    return try {
+        val w = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 100
+        val h = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 100
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        drawable.setBounds(0, 0, w, h)
+        drawable.draw(c)
+        bmp
+    } catch (e: Exception) {
+        null
+    }
+}
+
 private suspend fun createTierBoardBitmap(
     config: com.creditdb.pro.data.tier.TierTableConfig,
     isEn: Boolean,
@@ -417,6 +440,32 @@ private suspend fun createTierBoardBitmap(
     // 2. 各Tier行の描画
     val imageLoader = coil.Coil.imageLoader(context)
 
+    // 画像並行一括プリロード (CoilのCrossfadeDrawable問題解決＆超高速化)
+    val allItems = config.rows.flatMap { it.items }
+    val urlMap = allItems.mapNotNull { item ->
+        val url = item.imageUrl ?: WorkImageResolver.getCoverImageUrl(item.id, context)
+        if (!url.isNullOrBlank()) item.id to url else null
+    }.toMap()
+
+    val loadedBitmaps: Map<String, Bitmap> = coroutineScope {
+        urlMap.map { (itemId, url) ->
+            async(Dispatchers.IO) {
+                val bitmap: Bitmap? = try {
+                    val req = coil.request.ImageRequest.Builder(context)
+                        .data(url)
+                        .allowHardware(false)
+                        .crossfade(false)
+                        .build()
+                    val result = imageLoader.execute(req)
+                    drawableToBitmap(result.drawable)
+                } catch (e: Exception) {
+                    null
+                }
+                itemId to bitmap
+            }
+        }.awaitAll().mapNotNull { (id, bmp) -> if (bmp != null) id to bmp else null }.toMap()
+    }
+
     var currentY = headerHeight
 
     for (row in config.rows) {
@@ -457,23 +506,8 @@ private suspend fun createTierBoardBitmap(
             val cardY = currentY + 12f * s + lineIdx * (cardHeight + cardSpacing)
             val cardRect = android.graphics.RectF(cardX, cardY, cardX + cardWidth, cardY + cardHeight)
 
-            // Coilからカバー画像Bitmapを取得
-            var coverBitmap: Bitmap? = null
-            if (!item.imageUrl.isNullOrBlank()) {
-                try {
-                    val req = coil.request.ImageRequest.Builder(context)
-                        .data(item.imageUrl)
-                        .allowHardware(false)
-                        .build()
-                    val result = imageLoader.execute(req)
-                    val d = result.drawable
-                    if (d is android.graphics.drawable.BitmapDrawable) {
-                        coverBitmap = d.bitmap
-                    }
-                } catch (e: Exception) {
-                    coverBitmap = null
-                }
-            }
+            // プリロード済みマップからカバー画像Bitmapを取得
+            val coverBitmap: Bitmap? = loadedBitmaps[item.id]
 
             // カードベース下地描画
             paint.color = android.graphics.Color.parseColor("#252535")
