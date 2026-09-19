@@ -34,6 +34,7 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.creditdb.pro.data.tier.TierAnimeItem
+import com.creditdb.pro.data.tier.WorkImageResolver
 import com.creditdb.pro.ui.theme.LanguageManager
 import com.creditdb.pro.ui.theme.TierTheme
 import java.util.Locale
@@ -44,8 +45,8 @@ fun TierAnimeCard(
     anime: TierAnimeItem,
     modifier: Modifier = Modifier,
     isDragging: Boolean = false,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     onDragStart: () -> Unit = {},
     onDragEnd: () -> Unit = {},
     onDrag: (Float, Float) -> Unit = { _, _ -> }
@@ -55,10 +56,11 @@ fun TierAnimeCard(
     val tierColorSpec = remember(anime.tier) { TierTheme.forTier(anime.tier) }
     val context = LocalContext.current
 
-    val imageRequest = remember(anime.imageUrl, context) {
-        if (!anime.imageUrl.isNullOrBlank()) {
+    val imageRequest = remember(anime.imageUrl, anime.id, context) {
+        val effectiveUrl = if (!anime.imageUrl.isNullOrBlank()) anime.imageUrl else WorkImageResolver.getCoverImageUrl(anime.id, context)
+        if (!effectiveUrl.isNullOrBlank()) {
             ImageRequest.Builder(context)
-                .data(anime.imageUrl)
+                .data(effectiveUrl)
                 .crossfade(false)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)

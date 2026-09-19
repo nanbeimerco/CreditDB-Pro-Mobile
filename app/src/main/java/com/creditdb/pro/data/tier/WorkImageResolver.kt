@@ -8,33 +8,43 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 object WorkImageResolver {
-    private var coverMap: Map<String, Int>? = null
+    @Volatile
+    private var coverMap: Map<String, String>? = null
+    private var appContext: Context? = null
 
     fun initialize(context: Context) {
+        if (appContext == null) {
+            appContext = context.applicationContext
+        }
         if (coverMap != null) return
-        try {
-            context.assets.open("work_covers.json").use { stream ->
-                val text = stream.bufferedReader().use { it.readText() }
-                val jsonElement = Json.parseToJsonElement(text).jsonObject
-                val map = mutableMapOf<String, Int>()
-                for ((k, v) in jsonElement) {
-                    v.jsonPrimitive.content.toIntOrNull()?.let { id ->
-                        map[k] = id
+        synchronized(this) {
+            if (coverMap != null) return
+            try {
+                context.applicationContext.assets.open("work_covers.json").use { stream ->
+                    val text = stream.bufferedReader().use { it.readText() }
+                    val jsonElement = Json.parseToJsonElement(text).jsonObject
+                    val map = HashMap<String, String>(jsonElement.size)
+                    for ((k, v) in jsonElement) {
+                        map[k] = v.jsonPrimitive.content
                     }
+                    coverMap = map
                 }
-                coverMap = map
+            } catch (e: Exception) {
+                coverMap = emptyMap()
             }
-        } catch (e: Exception) {
-            coverMap = emptyMap()
         }
     }
 
     fun getCoverImageUrl(workId: String, context: Context? = null): String? {
-        if (coverMap == null && context != null) {
-            initialize(context)
+        val ctx = context ?: appContext
+        if (coverMap == null && ctx != null) {
+            initialize(ctx)
         }
-        val bgmId = coverMap?.get(workId) ?: return null
-        return "https://api.bgm.tv/v0/subjects/$bgmId/image?type=medium"
+        val target = coverMap?.get(workId) ?: return null
+        if (target.startsWith("http")) {
+            return target
+        }
+        return "https://api.bgm.tv/v0/subjects/$target/image?type=medium"
     }
 
     fun fromWorkItem(work: WorkItem, context: Context? = null): TierAnimeItem {
