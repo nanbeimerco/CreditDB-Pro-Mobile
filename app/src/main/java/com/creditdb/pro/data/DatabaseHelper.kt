@@ -173,44 +173,15 @@ class DatabaseHelper private constructor(private val context: Context) :
         val tempFile = File(destFile.parentFile, "$DB_NAME.unpack.tmp")
         if (tempFile.exists()) tempFile.delete()
 
-        // 1. まず解凍済み creditdb.db が assets に存在し、かつ 10MB 以上の有効サイズか確認 (空ファイル除外)
-        var rawCopied = false
+        // 1. assets/creditdb.zip から一時ファイルへ展開 (推奨・省容量43MB)
+        var unpackedFromZip = false
         try {
             val assetList = context.assets.list("") ?: emptyArray()
-            if (assetList.contains(DB_NAME)) {
-                val fd = try { context.assets.openFd(DB_NAME) } catch (e: Exception) { null }
-                val length = fd?.length ?: -1L
-                fd?.close()
-                // AssetFileDescriptor が取れない場合も考慮しストリームを開いてサイズ確認
-                if (length > 10 * 1024 * 1024L || length == -1L) {
-                    context.assets.open(DB_NAME).use { input ->
-                        if (input.available() > 10 * 1024 * 1024) {
-                            FileOutputStream(tempFile).use { fos ->
-                                java.io.BufferedOutputStream(fos, BUFFER_SIZE).use { bos ->
-                                    input.copyTo(bos, BUFFER_SIZE)
-                                    bos.flush()
-                                }
-                            }
-                            if (tempFile.length() > 50 * 1024 * 1024L && isValidSqlite(tempFile)) {
-                                rawCopied = true
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            rawCopied = false
-            if (tempFile.exists()) tempFile.delete()
-        }
-
-        // 2. assets/creditdb.zip から一時ファイルへ展開 (バッファサイズ 64KB)
-        if (!rawCopied) {
-            try {
+            if (assetList.contains("creditdb.zip")) {
                 context.assets.open("creditdb.zip").use { input ->
                     java.io.BufferedInputStream(input, BUFFER_SIZE).use { bis ->
                         ZipInputStream(bis).use { zip ->
                             var entry = zip.nextEntry
-                            var found = false
                             while (entry != null) {
                                 if (entry.name == DB_NAME || entry.name.endsWith(".db")) {
                                     FileOutputStream(tempFile).use { fos ->
@@ -219,20 +190,39 @@ class DatabaseHelper private constructor(private val context: Context) :
                                             bos.flush()
                                         }
                                     }
-                                    found = true
+                                    if (tempFile.length() > 50 * 1024 * 1024L && isValidSqlite(tempFile)) {
+                                        unpackedFromZip = true
+                                    }
                                     break
                                 }
                                 entry = zip.nextEntry
                             }
-                            if (!found) {
-                                throw IOException("creditdb.db not found inside creditdb.zip")
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            unpackedFromZip = false
+            if (tempFile.exists()) tempFile.delete()
+        }
+
+        // 2. フォールバック: 生の creditdb.db が assets に存在する場合
+        if (!unpackedFromZip) {
+            try {
+                val assetList = context.assets.list("") ?: emptyArray()
+                if (assetList.contains(DB_NAME)) {
+                    context.assets.open(DB_NAME).use { input ->
+                        FileOutputStream(tempFile).use { fos ->
+                            java.io.BufferedOutputStream(fos, BUFFER_SIZE).use { bos ->
+                                input.copyTo(bos, BUFFER_SIZE)
+                                bos.flush()
                             }
                         }
                     }
                 }
             } catch (e: IOException) {
                 if (tempFile.exists()) tempFile.delete()
-                throw RuntimeException("Failed to copy or unpack database from assets (neither valid $DB_NAME nor creditdb.zip usable)", e)
+                throw RuntimeException("Failed to copy or unpack database from assets (neither creditdb.zip nor $DB_NAME usable)", e)
             }
         }
 
