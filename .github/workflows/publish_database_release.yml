@@ -1,6 +1,8 @@
 name: Publish Database Release
 
 on:
+  schedule:
+    - cron: '0 0 * * 1' # 毎週月曜日 00:00 UTC（週次自動更新）
   workflow_dispatch:
   push:
     paths:
@@ -21,44 +23,87 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Locate database file
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch Latest CreditDB and Build creditdb.zip
+        run: |
+          python - << 'EOF'
+          import urllib.request
+          import gzip
+          import zipfile
+          import os
+          import shutil
+
+          url = "https://raw.githubusercontent.com/nanbeimerco/CreditDB-Web/main/public/data/creditdb.db.gz"
+          out_db = "creditdb.db"
+          out_zip = "creditdb.zip"
+
+          success = False
+          try:
+              print(f"Fetching latest database from {url}...")
+              req = urllib.request.Request(url, headers={"User-Agent": "CreditDB-Android-Releaser/1.0"})
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  gz_data = resp.read()
+                  with open(out_db, "wb") as f_out:
+                      f_out.write(gzip.decompress(gz_data))
+              print(f"Successfully downloaded and decompressed {out_db} ({os.path.getsize(out_db)/(1024*1024):.2f} MB)")
+              success = True
+          except Exception as e:
+              print(f"Remote fetch failed ({e}), checking local fallback...")
+
+          if not success:
+              for candidate in ["app/src/main/assets/creditdb.db", "CreditDB Pro for Android/app/src/main/assets/creditdb.db"]:
+                  if os.path.exists(candidate):
+                      shutil.copy2(candidate, out_db)
+                      print(f"Used local fallback: {candidate}")
+                      break
+
+          if os.path.exists(out_db):
+              print(f"Compressing {out_db} to {out_zip}...")
+              with zipfile.ZipFile(out_zip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+                  zf.write(out_db, arcname='creditdb.db')
+              print(f"Created {out_zip} ({os.path.getsize(out_zip)/(1024*1024):.2f} MB)")
+          elif os.path.exists("app/src/main/assets/creditdb.zip"):
+              shutil.copy2("app/src/main/assets/creditdb.zip", out_zip)
+              print(f"Used local creditdb.zip: {out_zip}")
+          EOF
+
+      - name: Locate database files
         id: locate_db
         run: |
-          if [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.zip" ]; then
-            echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
+          if [ -f "creditdb.zip" ]; then
+            echo "db_zip=creditdb.zip" >> $GITHUB_OUTPUT
           elif [ -f "app/src/main/assets/creditdb.zip" ]; then
-            echo "db_path=app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
-          elif [ -f "CreditDB Pro for Android/app/src/main/assets/creditdb.db" ]; then
-            echo "db_path=CreditDB Pro for Android/app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
+            echo "db_zip=app/src/main/assets/creditdb.zip" >> $GITHUB_OUTPUT
+          fi
+          if [ -f "creditdb.db" ]; then
+            echo "db_raw=creditdb.db" >> $GITHUB_OUTPUT
           elif [ -f "app/src/main/assets/creditdb.db" ]; then
-            echo "db_path=app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
-          else
-            echo "Searching for database..."
-            FOUND=$(find . \( -name "creditdb.zip" -o -name "creditdb.db" \) -not -path "*/build/*" | head -n 1)
-            if [ -z "$FOUND" ]; then
-              echo "Error: creditdb.zip or creditdb.db not found!"
-              exit 1
-            fi
-            echo "db_path=$FOUND" >> $GITHUB_OUTPUT
+            echo "db_raw=app/src/main/assets/creditdb.db" >> $GITHUB_OUTPUT
           fi
 
       - name: Get current date for release tag
         id: date
         run: echo "tag=v$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
 
-      - name: Publish GitHub Release with creditdb.db
+      - name: Publish GitHub Release with creditdb.zip and creditdb.db
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.date.outputs.tag }}
           name: "CreditDB Data Release ${{ steps.date.outputs.tag }}"
           body: |
-            Automated CreditDB Pro database update.
-            - Database: `creditdb.db`
-            - Generated at: $(date -u)
+            Automated Weekly CreditDB Pro database update (AniList & Bangumi API).
+            - Updated at: $(date -u)
+            - Release Tag: ${{ steps.date.outputs.tag }}
+            - Files: `creditdb.zip` (compressed SQLite), `creditdb.db`
           draft: false
           prerelease: false
           make_latest: true
           files: |
-            ${{ steps.locate_db.outputs.db_path }}
+            ${{ steps.locate_db.outputs.db_zip }}
+            ${{ steps.locate_db.outputs.db_raw }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
