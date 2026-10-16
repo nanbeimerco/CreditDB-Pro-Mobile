@@ -1250,13 +1250,33 @@ class CreditRepository(private val context: Context) {
     }
 
     private fun parseStaffCredits(jsonStr: String): Map<String, List<StaffCredit>> {
-        val result = mutableMapOf<String, List<StaffCredit>>()
+        val result = linkedMapOf<String, List<StaffCredit>>()
+        val allowedRoles = listOf(
+            "director", "series_comp", "char_design", "sakkan",
+            "genga", "unit_director", "music", "art_dir", "studio"
+        )
         try {
             val root = json.parseToJsonElement(jsonStr) as? JsonObject ?: return result
+            val rawMap = mutableMapOf<String, MutableList<StaffCredit>>()
             for ((roleKey, el) in root) {
                 if (el is JsonArray) {
-                    val credits = el.map { StaffCredit.fromJsonElement(it) }
-                    result[roleKey] = credits
+                    val targetRole = if (roleKey == "storyboard") "unit_director" else roleKey
+                    if (targetRole !in allowedRoles) continue
+                    val list = rawMap.getOrPut(targetRole) { mutableListOf() }
+                    val existingNames = list.map { it.name.trim() }.toMutableSet()
+                    for (item in el) {
+                        val credit = StaffCredit.fromJsonElement(item)
+                        val cleanName = credit.name.trim()
+                        if (cleanName.isNotEmpty() && existingNames.add(cleanName)) {
+                            list.add(credit)
+                        }
+                    }
+                }
+            }
+            for (r in allowedRoles) {
+                val list = rawMap[r]
+                if (!list.isNullOrEmpty()) {
+                    result[r] = list
                 }
             }
         } catch (e: Exception) {
