@@ -578,6 +578,8 @@ fun StaffFilterBottomSheet(
     onSortChange: (StaffSortOption) -> Unit,
     debutEra: DebutEraFilter,
     onDebutEraChange: (DebutEraFilter) -> Unit,
+    crossTierFilter: String = "all",
+    onCrossTierChange: (String) -> Unit = {},
     onReset: () -> Unit
 ) {
     val isEn = LanguageManager.isEnglish
@@ -638,7 +640,33 @@ fun StaffFilterBottomSheet(
                 }
             }
 
-            // 2. 初参加年代
+            // 2. もう片方の指標のTier指定 (総合実力順のときは生涯累計実績Tier、生涯累計実績順のときは総合実力Tier)
+            val crossTierTitle = if (sortOption == StaffSortOption.CUMULATIVE) {
+                if (isEn) "Filter by Power Score S(a) Tier" else "総合実力 S(a) の Tier 指定"
+            } else {
+                if (isEn) "Filter by Career Cumulative ΣZ Tier" else "生涯累計実績 ΣZ の Tier 指定"
+            }
+            Text(
+                text = crossTierTitle,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Bold
+            )
+            val tiers = listOf("all", "S+", "S", "A+", "A", "B+", "B", "C", "D")
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tiers.forEach { t ->
+                    FilterChip(
+                        selected = crossTierFilter == t,
+                        onClick = { onCrossTierChange(t) },
+                        label = { Text(if (t == "all") (if (isEn) "All Tiers" else "全Tier") else t) }
+                    )
+                }
+            }
+
+            // 3. 初参加年代
             Text(
                 text = if (isEn) "Debut Era" else "初参加年代",
                 style = MaterialTheme.typography.labelMedium,

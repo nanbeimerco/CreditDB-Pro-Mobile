@@ -345,7 +345,7 @@ class CreditRepository(private val context: Context) {
     }
 
     /**
-     * 制作陣・声優リーダーボードの取得 (10 roles + studio)
+     * 制作陣・声優リーダーボードの取得 (11 roles + studio)
      */
     suspend fun getLeaderboard(
         role: String = "all",
@@ -354,7 +354,8 @@ class CreditRepository(private val context: Context) {
         limit: Int = 50,
         offset: Int = 0,
         debutMin: Int? = null,
-        debutMax: Int? = null
+        debutMax: Int? = null,
+        crossTierFilter: String = "all"
     ): List<LeaderboardItem> = withContext(Dispatchers.IO) {
         val db = dbHelper.readableDatabase
         val (_, titleToEnMap) = getWorkTitleEnMaps(db)
@@ -436,7 +437,7 @@ class CreditRepository(private val context: Context) {
 
         // 全役職で検索クエリがある場合、マッチするスタジオを先頭に統合
         val matchedStudios = mutableListOf<LeaderboardItem>()
-        if (role == "all" && query.isNotBlank() && offset == 0 && debutMin == null && debutMax == null) {
+        if (role == "all" && query.isNotBlank() && offset == 0 && debutMin == null && debutMax == null && crossTierFilter == "all") {
             try {
                 val qNorm = TextNormalizer.normalize(query)
                 val hasLatin = query.any { it in 'a'..'z' || it in 'A'..'Z' }
@@ -498,6 +499,12 @@ class CreditRepository(private val context: Context) {
         if (debutMax != null && debutMax > 0) {
             conditions.add("first_year <= ?")
             args.add(debutMax.toString())
+        }
+
+        if (crossTierFilter != "all") {
+            val targetTierCol = if (sortOption == StaffSortOption.CUMULATIVE) "rating_tier" else "cumulative_tier"
+            conditions.add("$targetTierCol = ?")
+            args.add(crossTierFilter)
         }
 
         if (query.isNotBlank()) {
@@ -567,7 +574,9 @@ class CreditRepository(private val context: Context) {
         role: String = "all",
         query: String = "",
         debutMin: Int? = null,
-        debutMax: Int? = null
+        debutMax: Int? = null,
+        sortOption: StaffSortOption = StaffSortOption.RATING,
+        crossTierFilter: String = "all"
     ): Int = withContext(Dispatchers.IO) {
         val db = dbHelper.readableDatabase
 
@@ -625,6 +634,12 @@ class CreditRepository(private val context: Context) {
         if (debutMax != null && debutMax > 0) {
             conditions.add("first_year <= ?")
             args.add(debutMax.toString())
+        }
+
+        if (crossTierFilter != "all") {
+            val targetTierCol = if (sortOption == StaffSortOption.CUMULATIVE) "rating_tier" else "cumulative_tier"
+            conditions.add("$targetTierCol = ?")
+            args.add(crossTierFilter)
         }
 
         if (query.isNotBlank()) {
@@ -1253,7 +1268,7 @@ class CreditRepository(private val context: Context) {
         val result = linkedMapOf<String, List<StaffCredit>>()
         val allowedRoles = listOf(
             "director", "series_comp", "char_design", "sakkan",
-            "genga", "unit_director", "music", "art_dir", "studio"
+            "genga", "genga_2nd", "unit_director", "music", "art_dir", "studio"
         )
         try {
             val root = json.parseToJsonElement(jsonStr) as? JsonObject ?: return result
@@ -1518,6 +1533,7 @@ class CreditRepository(private val context: Context) {
                 "art_dir" to 1.5,
                 "music" to 1.5,
                 "genga" to 1.0,
+                "genga_2nd" to 0.2,
                 "cv" to 0.8
             )
 
@@ -1547,7 +1563,7 @@ class CreditRepository(private val context: Context) {
                         val keys = root.keys()
                         while (keys.hasNext()) {
                             val role = keys.next()
-                            if (role == "studio") continue
+                            if (role == "studio" || role !in roleWeights) continue
                             val weight = roleWeights[role] ?: 0.5
                             val arr = root.optJSONArray(role)
                             if (arr != null) {

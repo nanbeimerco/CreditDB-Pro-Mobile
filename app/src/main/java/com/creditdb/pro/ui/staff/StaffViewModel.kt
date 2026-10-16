@@ -26,11 +26,12 @@ data class StaffUiState(
     val debutEra: DebutEraFilter = DebutEraFilter.ALL,
     val searchQuery: String = "",
     val sortOption: StaffSortOption = StaffSortOption.RATING,
+    val crossTierFilter: String = "all",
     val hasMore: Boolean = true,
     val showFilterSheet: Boolean = false
 ) {
     val hasActiveFilters: Boolean
-        get() = debutEra != DebutEraFilter.ALL || sortOption != StaffSortOption.RATING
+        get() = debutEra != DebutEraFilter.ALL || sortOption != StaffSortOption.RATING || crossTierFilter != "all"
 }
 
 class StaffViewModel(application: Application) : AndroidViewModel(application) {
@@ -82,16 +83,26 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
         fetchLeaderboard(reset = true)
     }
 
+    fun onCrossTierSelect(tier: String) {
+        if (_uiState.value.crossTierFilter == tier) return
+        _uiState.update { it.copy(crossTierFilter = tier) }
+        fetchLeaderboard(reset = true)
+    }
+
     fun setFilterSheetVisible(visible: Boolean) {
         _uiState.update { it.copy(showFilterSheet = visible) }
     }
 
     fun resetFilters() {
-        if (_uiState.value.debutEra == DebutEraFilter.ALL && _uiState.value.sortOption == StaffSortOption.RATING) return
+        if (_uiState.value.debutEra == DebutEraFilter.ALL &&
+            _uiState.value.sortOption == StaffSortOption.RATING &&
+            _uiState.value.crossTierFilter == "all"
+        ) return
         _uiState.update {
             it.copy(
                 debutEra = DebutEraFilter.ALL,
-                sortOption = StaffSortOption.RATING
+                sortOption = StaffSortOption.RATING,
+                crossTierFilter = "all"
             )
         }
         fetchLeaderboard(reset = true)
@@ -121,7 +132,8 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
                     limit = pageSize,
                     offset = currentOffset,
                     debutMin = state.debutEra.minYear,
-                    debutMax = state.debutEra.maxYear
+                    debutMax = state.debutEra.maxYear,
+                    crossTierFilter = state.crossTierFilter
                 )
 
                 val total = if (reset) {
@@ -129,7 +141,9 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
                         role = state.selectedRole,
                         query = state.searchQuery,
                         debutMin = state.debutEra.minYear,
-                        debutMax = state.debutEra.maxYear
+                        debutMax = state.debutEra.maxYear,
+                        sortOption = state.sortOption,
+                        crossTierFilter = state.crossTierFilter
                     )
                 } else {
                     state.totalCount

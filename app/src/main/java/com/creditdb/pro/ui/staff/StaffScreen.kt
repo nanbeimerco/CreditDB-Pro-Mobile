@@ -77,7 +77,7 @@ fun StaffScreen(
             placeholder = if (isEn) com.creditdb.pro.ui.theme.AppStrings.searchPlaceholderEn else "スタッフ・声優・制作スタジオ名で検索..."
         )
 
-        // 2. 10部門+スタジオ ロールセレクター (水平スクロール)
+        // 2. 11部門+スタジオ ロールセレクター (水平スクロール)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -99,6 +99,46 @@ fun StaffScreen(
                         )
                     }
                 )
+            }
+        }
+
+        // 2b. もう片方の指標のTier指定フィルタ (総合実力順のときは生涯累計実績Tier、生涯累計実績順のときは総合実力Tier)
+        if (uiState.selectedRole != "studio") {
+            val crossTierLabel = if (uiState.sortOption == StaffSortOption.CUMULATIVE) {
+                if (isEn) "Power S(a) Tier:" else "総合実力Tier指定:"
+            } else {
+                if (isEn) "Career ΣZ Tier:" else "生涯実績Tier指定:"
+            }
+            val tierOptions = listOf("all", "S+", "S", "A+", "A", "B+", "B", "C", "D")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 1.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = crossTierLabel,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 2.dp)
+                )
+                tierOptions.forEach { tKey ->
+                    val isSelected = uiState.crossTierFilter == tKey
+                    val labelText = if (tKey == "all") (if (isEn) "All" else "全Tier") else tKey
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { viewModel.onCrossTierSelect(tKey) },
+                        label = {
+                            Text(
+                                text = labelText,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)
+                            )
+                        }
+                    )
+                }
             }
         }
 
@@ -137,6 +177,14 @@ fun StaffScreen(
                     if (uiState.debutEra != DebutEraFilter.ALL) {
                         append(uiState.debutEra.getDisplayName(isEn))
                         append(" · ")
+                    }
+                    if (uiState.crossTierFilter != "all" && uiState.selectedRole != "studio") {
+                        val prefix = if (uiState.sortOption == StaffSortOption.CUMULATIVE) {
+                            if (isEn) "S(a):" else "実力:"
+                        } else {
+                            if (isEn) "ΣZ:" else "累計:"
+                        }
+                        append("$prefix${uiState.crossTierFilter} · ")
                     }
                     append(uiState.sortOption.getDisplayName(isEn))
                 }
@@ -228,6 +276,8 @@ fun StaffScreen(
             onSortChange = viewModel::onSortOptionSelect,
             debutEra = uiState.debutEra,
             onDebutEraChange = viewModel::onDebutEraSelect,
+            crossTierFilter = uiState.crossTierFilter,
+            onCrossTierChange = viewModel::onCrossTierSelect,
             onReset = viewModel::resetFilters
         )
     }
