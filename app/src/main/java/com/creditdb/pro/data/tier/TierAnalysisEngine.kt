@@ -17,6 +17,7 @@ object TierAnalysisEngine {
         "char_design",
         "sakkan",
         "genga",
+        "genga_2nd",
         "unit_director",
         "music",
         "art_dir",

@@ -14,7 +14,7 @@ class DatabaseHelper private constructor(private val context: Context) :
 
     companion object {
         const val DB_NAME = "creditdb.db"
-        const val DB_VERSION = 10
+        const val DB_VERSION = 11
         private const val BUFFER_SIZE = 65536 // 64 KB
 
         @Volatile
@@ -36,7 +36,7 @@ class DatabaseHelper private constructor(private val context: Context) :
         var needsRefresh = !dbPath.exists() || dbPath.length() < 1024 * 1024 // 1MB 未満は破損とみなす
 
         if (!needsRefresh) {
-            // テーブル整合性チェック: studios テーブル、作品数 21,700 件以上、first_year カラム存在確認、DB v2.2.0 確認
+            // テーブル整合性チェック: studios テーブル、作品数 21,700 件以上、first_year カラム存在確認、DB v2.3.0 確認
             try {
                 SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                     val cursor = db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name='studios'", null)
@@ -59,8 +59,8 @@ class DatabaseHelper private constructor(private val context: Context) :
                     }
                     colCursor.close()
 
-                    // DB v2.2.0 (2026年秋アニメ完全網羅・放送中動的更新・Z=0除外版) が必要
-                    if (!hasStudios || totalWorks < 21700 || !hasFirstYear || dbVersion != "2.2.0") {
+                    // DB v2.3.0 (原画・2原分離反映版) が必要
+                    if (!hasStudios || totalWorks < 21700 || !hasFirstYear || dbVersion != "2.3.0") {
                         needsRefresh = true
                     }
                 }

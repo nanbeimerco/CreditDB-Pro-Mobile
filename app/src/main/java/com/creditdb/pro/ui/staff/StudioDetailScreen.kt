@@ -41,6 +41,7 @@ private val DEPARTMENTS = listOf(
     DeptOption("all", "全体", "All"),
     DeptOption("sakkan", "作画監督", "Animation"),
     DeptOption("genga", "原画", "Key Anim"),
+    DeptOption("genga_2nd", "2原", "2nd KA"),
     DeptOption("director", "監督", "Director"),
     DeptOption("unit_director", "演出・絵コンテ", "Episode Dir"),
     DeptOption("char_design", "キャラデザ", "Ch. Design"),
