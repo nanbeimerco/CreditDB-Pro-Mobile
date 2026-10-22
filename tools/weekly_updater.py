@@ -860,7 +860,11 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
         candidates = []
 
         if rKey == "all":
-            for name, recs in staff_overall.items():
+            # 「全役職」は制作スタッフだけで集計する（声優は「声優」の一覧で見る）
+            for name, all_recs in staff_overall.items():
+                recs = [r for r in all_recs if r["role"] != "cv"]
+                if not recs:
+                    continue
                 eval_recs = [r for r in recs if abs(r["z"]) > 1e-6]
                 if eval_recs:
                     w_sum = sum(r["w"] for r in eval_recs)
@@ -1005,13 +1009,17 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
 
     prof_batch = []
     for name, roles in staff_lb_map.items():
-        all_stat = roles.get("all")
-        if not all_stat:
-            continue
-
         sub_roles = [st for r, st in roles.items() if r != "all"]
         sub_roles.sort(key=lambda s: s["works_count"], reverse=True)
         primary_role = sub_roles[0]["role"] if sub_roles else "cv"
+
+        # 総合成績: 主に声優の人は「声優」の成績、それ以外は「全スタッフ」（声優を除く）の成績を使う
+        if primary_role == "cv" and "cv" in roles:
+            all_stat = roles["cv"]
+        else:
+            all_stat = roles.get("all") or roles.get("cv")
+        if not all_stat:
+            continue
 
         role_stats_list = []
         for st in sub_roles:

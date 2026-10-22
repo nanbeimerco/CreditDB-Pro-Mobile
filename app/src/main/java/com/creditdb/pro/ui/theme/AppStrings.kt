@@ -71,7 +71,7 @@ object AppStrings {
                 "art_dir" -> "Art Director"
                 "cv" -> "Voice Actor (CV)"
                 "studio" -> "Animation Studio"
-                "all" -> "All Roles"
+                "all" -> "All Staff (excl. voice cast)"
                 else -> roleKey.replace("_", " ").capitalizeWords()
             }
         } else {
@@ -87,7 +87,7 @@ object AppStrings {
                 "art_dir" -> "美術監督"
                 "cv" -> "声優"
                 "studio" -> "スタジオ"
-                "all" -> "全役職"
+                "all" -> "全スタッフ（声優を除く）"
                 else -> roleKey
             }
         }
@@ -107,7 +107,7 @@ object AppStrings {
                 "art_dir" -> "Art Dir"
                 "cv" -> "Voice Actor"
                 "studio" -> "Studio"
-                "all" -> "All"
+                "all" -> "All Staff"
                 else -> roleKey
             }
         } else {
@@ -123,7 +123,7 @@ object AppStrings {
                 "art_dir" -> "美術監督"
                 "cv" -> "声優"
                 "studio" -> "スタジオ"
-                "all" -> "全役職"
+                "all" -> "全スタッフ"
                 else -> roleKey
             }
         }

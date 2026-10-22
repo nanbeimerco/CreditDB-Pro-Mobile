@@ -513,8 +513,13 @@ class CreditRepository(private val context: Context) {
         val conditions = mutableListOf<String>()
         val args = mutableListOf<String>()
 
-        conditions.add("role = ?")
-        args.add(role)
+        if (role == "all" && query.isNotBlank()) {
+            // 「全スタッフ」での検索は声優も対象にする（声優だけの人は声優の成績で表示）
+            conditions.add("(role = 'all' OR (role = 'cv' AND name NOT IN (SELECT name FROM leaderboards WHERE role = 'all')))")
+        } else {
+            conditions.add("role = ?")
+            args.add(role)
+        }
 
         if (debutMin != null && debutMin > 0) {
             conditions.add("first_year >= ?")
@@ -648,8 +653,13 @@ class CreditRepository(private val context: Context) {
         val conditions = mutableListOf<String>()
         val args = mutableListOf<String>()
 
-        conditions.add("role = ?")
-        args.add(role)
+        if (role == "all" && query.isNotBlank()) {
+            // 「全スタッフ」での検索は声優も対象にする（声優だけの人は声優の成績で表示）
+            conditions.add("(role = 'all' OR (role = 'cv' AND name NOT IN (SELECT name FROM leaderboards WHERE role = 'all')))")
+        } else {
+            conditions.add("role = ?")
+            args.add(role)
+        }
 
         if (debutMin != null && debutMin > 0) {
             conditions.add("first_year >= ?")
@@ -823,7 +833,9 @@ class CreditRepository(private val context: Context) {
                    p.all_role_stats_json,
                    p.career_trajectory_json
             FROM profiles p
-            LEFT JOIN leaderboards l ON l.role = 'all' AND l.name = p.name
+            LEFT JOIN leaderboards l
+                   ON l.role = CASE WHEN p.primary_role = 'cv' THEN 'cv' ELSE 'all' END
+                  AND l.name = p.name
             WHERE p.name = ? LIMIT 1
             """.trimIndent(),
             arrayOf(staffName)

@@ -97,18 +97,13 @@ fun StaffScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val countLabel = if (isEn) {
-                if (uiState.selectedRole == "studio") {
-                    "${uiState.totalCount} Studios"
-                } else {
-                    "${uiState.totalCount} Creators & Cast"
-                }
-            } else {
-                if (uiState.selectedRole == "studio") {
-                    "${uiState.totalCount} スタジオ"
-                } else {
-                    "${uiState.totalCount} 名のスタッフ・声優"
-                }
+            val n = uiState.totalCount
+            val countLabel = when {
+                uiState.selectedRole == "studio" -> if (isEn) "$n Studios" else "$n スタジオ"
+                uiState.selectedRole == "cv" -> if (isEn) "$n Voice Actors" else "$n 名の声優"
+                // 「全スタッフ」は声優を含まない（検索時のみ声優も表示する）
+                uiState.selectedRole == "all" && uiState.searchQuery.isBlank() -> if (isEn) "$n Creators" else "$n 名のスタッフ"
+                else -> if (isEn) "$n Creators & Cast" else "$n 名のスタッフ・声優"
             }
             com.creditdb.pro.ui.components.CountLabel(text = countLabel, modifier = Modifier.weight(1f))
 
