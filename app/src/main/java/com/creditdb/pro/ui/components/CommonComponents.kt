@@ -591,8 +591,8 @@ fun StaffFilterBottomSheet(
                 fontWeight = FontWeight.Bold
             )
             val availableSorts = listOf(
-                StaffSortOption.RATING,
                 StaffSortOption.CUMULATIVE,
+                StaffSortOption.RATING,
                 StaffSortOption.NEWEST_DEBUT,
                 StaffSortOption.OLDEST_DEBUT,
                 StaffSortOption.WORKS_COUNT

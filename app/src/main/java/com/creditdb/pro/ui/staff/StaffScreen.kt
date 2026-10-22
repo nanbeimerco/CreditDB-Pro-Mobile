@@ -88,44 +88,13 @@ fun StaffScreen(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
         )
 
-        // 2b. もう片方の指標のTier指定フィルタ (総合実力順のときは生涯累計実績Tier、生涯累計実績順のときは総合実力Tier)
-        if (uiState.selectedRole != "studio") {
-            val crossTierLabel = if (uiState.sortOption == StaffSortOption.CUMULATIVE) {
-                if (isEn) "Power S(a) Tier:" else "総合実力Tier指定:"
-            } else {
-                if (isEn) "Career ΣZ Tier:" else "生涯実績Tier指定:"
-            }
-            val tierOptions = listOf("all", "S+", "S", "A+", "A", "B+", "B", "C", "D")
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = crossTierLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
-                    options = tierOptions,
-                    selected = uiState.crossTierFilter,
-                    onSelect = { viewModel.onCrossTierSelect(it) },
-                    label = { if (it == "all") (if (isEn) "All" else "全Tier") else it },
-                    modifier = Modifier.weight(1f),
-                    compact = true
-                )
-            }
-        }
-
         // 3. スリムステータスバー (件数 & 条件表示)
+        // Tier 指定は検索窓右のフィルタボタンから開くシートで行う（一覧の表示領域を優先）
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val countLabel = if (isEn) {
@@ -141,16 +110,9 @@ fun StaffScreen(
                     "${uiState.totalCount} 名のスタッフ・声優"
                 }
             }
-            Text(
-                text = countLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            com.creditdb.pro.ui.components.CountLabel(text = countLabel, modifier = Modifier.weight(1f))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { viewModel.setFilterSheetVisible(true) }
-            ) {
+            run {
                 val conditionLabel = buildString {
                     if (uiState.debutEra != DebutEraFilter.ALL) {
                         append(uiState.debutEra.getDisplayName(isEn))
@@ -166,18 +128,10 @@ fun StaffScreen(
                     }
                     append(uiState.sortOption.getDisplayName(isEn))
                 }
-                Text(
+                com.creditdb.pro.ui.components.SortLabelPill(
                     text = conditionLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Icon(
-                    imageVector = Icons.Default.FilterList,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(14.dp)
+                    onClick = { viewModel.setFilterSheetVisible(true) },
+                    modifier = Modifier.weight(1f, fill = false)
                 )
             }
         }

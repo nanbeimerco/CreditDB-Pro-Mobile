@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.*
@@ -34,7 +35,6 @@ import com.creditdb.pro.ui.components.ThemePaletteBottomSheet
 import com.creditdb.pro.ui.guide.GuideScreen
 import com.creditdb.pro.ui.navigation.Screen
 import com.creditdb.pro.ui.predict.PredictScreen
-import com.creditdb.pro.ui.scene.SceneSearchScreen
 import com.creditdb.pro.ui.staff.StaffDetailScreen
 import com.creditdb.pro.ui.staff.StaffScreen
 import com.creditdb.pro.ui.staff.StudioDetailScreen
@@ -136,14 +136,20 @@ fun MainApp() {
             if (isTopLevelRoute) {
                 TopAppBar(
                     title = {
+                        // ロゴは文字サイズ設定に追従させず固定サイズで描く（大きな文字設定・狭い画面での崩れ防止）
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        val logoSize = with(density) { 22.dp.toSp() }
+                        val proSize = with(density) { 10.dp.toSp() }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = "CreditDB",
-                                style = MaterialTheme.typography.titleLargeEmphasized,
-                                color = MaterialTheme.colorScheme.onSurface
+                                style = MaterialTheme.typography.titleLargeEmphasized.copy(fontSize = logoSize, lineHeight = logoSize),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                softWrap = false
                             )
                             Surface(
                                 shape = androidx.compose.foundation.shape.CircleShape,
@@ -152,58 +158,74 @@ fun MainApp() {
                             ) {
                                 Text(
                                     text = "PRO",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    fontWeight = FontWeight.ExtraBold
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = proSize, lineHeight = proSize),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
                     },
                     actions = {
-                        // 言語切り替えトグル (🇯🇵 JP / 🇺🇸 EN)
-                        TextButton(
+                        val isEnLang = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+                        // 言語切り替え: 塗り＋その上の文字色の組で、どのテーマでも読みやすくする
+                        Surface(
                             onClick = { com.creditdb.pro.ui.theme.LanguageManager.toggleLanguage() },
-                            contentPadding = PaddingValues(horizontal = 6.dp)
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(end = 4.dp)
                         ) {
                             Text(
-                                text = if (com.creditdb.pro.ui.theme.LanguageManager.isEnglish) "🇺🇸 EN" else "🇯🇵 JP",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        // 数理解説ガイド画面への遷移ボタン
-                        IconButton(
-                            onClick = { navController.navigate(Screen.Guide.route) }
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.MenuBook,
-                                contentDescription = if (com.creditdb.pro.ui.theme.LanguageManager.isEnglish) "Guide" else "数理解説ガイド",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // カラーテーマ・プリセット変更ボタン
-                        IconButton(
-                            onClick = { showThemeSheet = true }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Palette,
-                                contentDescription = if (com.creditdb.pro.ui.theme.LanguageManager.isEnglish) "Theme" else "カラーテーマ変更",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = if (isEnLang) "EN" else "JP",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelLargeEmphasized,
+                                maxLines = 1
                             )
                         }
 
                         // 手動データベース更新ボタン
-                        IconButton(
-                            onClick = { triggerDatabaseUpdate() }
-                        ) {
+                        IconButton(onClick = { triggerDatabaseUpdate() }) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = if (com.creditdb.pro.ui.theme.LanguageManager.isEnglish) "Update DB" else "データベース手動更新",
+                                contentDescription = if (isEnLang) "Update DB" else "データベース手動更新",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+
+                        // ガイド・テーマはメニューにまとめてタイトルの幅を確保する
+                        var menuOpen by remember { mutableStateOf(false) }
+                        Box {
+                            IconButton(onClick = { menuOpen = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = if (isEnLang) "More" else "その他",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = menuOpen,
+                                onDismissRequest = { menuOpen = false },
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isEnLang) "Guide" else "数理解説ガイド") },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        navController.navigate(Screen.Guide.route)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (isEnLang) "Theme & Language" else "テーマ・言語設定") },
+                                    leadingIcon = { Icon(Icons.Outlined.Palette, contentDescription = null) },
+                                    onClick = {
+                                        menuOpen = false
+                                        showThemeSheet = true
+                                    }
+                                )
+                            }
                         }
                     },
                     scrollBehavior = scrollBehavior,
@@ -314,14 +336,6 @@ fun MainApp() {
                 )
             }
 
-            // タブ: シーン特定 (trace.moe)
-            composable(Screen.Scene.route) {
-                SceneSearchScreen(
-                    onNavigateToWork = { workId ->
-                        navController.navigate(Screen.WorkDetail.createRoute(workId))
-                    }
-                )
-            }
 
             // 数理解説ガイド
             composable(Screen.Guide.route) {
