@@ -57,7 +57,7 @@ fun WorkDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val repository = remember { CreditRepository(context) }
+    val repository = remember { CreditRepository.getInstance(context) }
     var workDetail by remember { mutableStateOf<WorkDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 

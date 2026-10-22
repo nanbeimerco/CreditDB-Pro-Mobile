@@ -20,6 +20,9 @@ class DatabaseHelper private constructor(private val context: Context) :
         @Volatile
         private var instance: DatabaseHelper? = null
 
+        /** DB の準備（初回は assets からの展開）が済んでいるか */
+        fun isInitialized(): Boolean = instance != null
+
         fun getInstance(context: Context): DatabaseHelper {
             return instance ?: synchronized(this) {
                 instance ?: DatabaseHelper(context.applicationContext).also {

@@ -84,8 +84,56 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CreditDBProTheme {
-                MainApp()
+                // DB の準備（初回は 200MB 超の展開）を UI スレッドで行うと固まるので、
+                // バックグラウンドで済ませてからメイン画面を出す
+                var dbReady by remember { mutableStateOf(com.creditdb.pro.data.DatabaseHelper.isInitialized()) }
+                if (dbReady) {
+                    MainApp()
+                } else {
+                    StartupScreen()
+                    val appContext = LocalContext.current.applicationContext
+                    LaunchedEffect(Unit) {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            com.creditdb.pro.data.DatabaseHelper.getInstance(appContext)
+                            CreditRepository.getInstance(appContext)
+                            com.creditdb.pro.data.PredictionEngine.getInstance(appContext)
+                        }
+                        dbReady = true
+                    }
+                }
             }
+        }
+    }
+}
+
+/** 起動時の DB 準備中に表示する画面 */
+@Composable
+fun StartupScreen() {
+    val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "CreditDB",
+                style = MaterialTheme.typography.headlineMediumEmphasized,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            com.creditdb.pro.ui.components.AppLoadingIndicator(contained = true, size = 72.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = if (isEn) "Preparing database..." else "データベースを準備しています…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = if (isEn) "The first launch may take a little while." else "初回起動時は少し時間がかかります",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -97,7 +145,7 @@ fun MainApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val context = LocalContext.current
-    val repository = remember { CreditRepository(context) }
+    val repository = remember { CreditRepository.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
 
     // パフォーマンスを最優先し、再レイアウト負荷のない固定TopAppBar

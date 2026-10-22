@@ -68,7 +68,7 @@ fun StudioDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val repository = remember { CreditRepository(context) }
+    val repository = remember { CreditRepository.getInstance(context) }
     var works by remember { mutableStateOf<List<StudioWorkItem>>(emptyList()) }
     var staffList by remember { mutableStateOf<List<StudioStaffMember>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -148,10 +148,11 @@ fun StudioDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // 1. スタジオ名ヘッダーカード
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.extraLarge,
@@ -224,9 +225,11 @@ fun StudioDetailScreen(
                         }
                     }
                 }
+                }
 
                 // 2. セグメント切り替えタブ (主要制作陣 / 制作作品一覧)
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     PrimaryTabRow(
                         selectedTabIndex = selectedTabIndex,
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -280,11 +283,13 @@ fun StudioDetailScreen(
                         )
                     }
                 }
+                }
 
                 // 3. タブコンテンツ
                 if (selectedTabIndex == 0) {
                     // --- 主要制作陣タブ ---
                     item {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             // 部門別フィルターチップ (水平スクロール)
                             Row(
@@ -368,9 +373,11 @@ fun StudioDetailScreen(
                             }
                         }
                     }
+                    }
 
                     if (filteredStaff.isEmpty()) {
                         item {
+                            Column(modifier = Modifier.padding(bottom = 16.dp)) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -384,6 +391,7 @@ fun StudioDetailScreen(
                                 )
                             }
                         }
+                        }
                     } else {
                         itemsIndexed(filteredStaff, key = { _, it -> it.name }) { index, member ->
                             val (displayName, secondaryName) = member.getDisplayName(isEn)
@@ -391,6 +399,7 @@ fun StudioDetailScreen(
 
                             Card(
                                 modifier = Modifier
+                                    .padding(bottom = 16.dp)
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable(enabled = onStaffClick != null) {
@@ -557,6 +566,7 @@ fun StudioDetailScreen(
                 } else {
                     // --- 制作作品一覧タブ ---
                     item {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Text(
                             text = if (isEn) "Produced Works (Chronological · ${works.size} works)" else "制作作品一覧 (制作年順・全 ${works.size} 作品)",
                             style = MaterialTheme.typography.titleSmall,
@@ -564,9 +574,11 @@ fun StudioDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+                    }
 
                     if (works.isEmpty()) {
                         item {
+                            Column(modifier = Modifier.padding(bottom = 16.dp)) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -580,27 +592,22 @@ fun StudioDetailScreen(
                                 )
                             }
                         }
+                        }
                     } else {
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.large,
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                        itemsIndexed(
+                            items = works,
+                            key = { index, item -> "${item.workId}_$index" }
+                        ) { index, item ->
+                            com.creditdb.pro.ui.components.GroupedListItem(
+                                index = index,
+                                count = works.size,
+                                onClick = { onWorkClick(item.workId) }
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(6.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    works.forEach { item ->
                                         val itemTierSpec = TierTheme.forTier(item.tier)
                                         Row(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable { onWorkClick(item.workId) }
-                                                .padding(horizontal = 8.dp, vertical = 7.dp),
+    .fillMaxWidth()
+    .padding(horizontal = 14.dp, vertical = 10.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
@@ -655,8 +662,6 @@ fun StudioDetailScreen(
                                             }
                                         }
                                     }
-                                }
-                            }
                         }
                     }
                 }

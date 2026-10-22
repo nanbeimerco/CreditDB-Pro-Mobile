@@ -51,7 +51,7 @@ data class TierUiState(
 )
 
 class TierViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CreditRepository(application)
+    private val repository = CreditRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow(TierUiState())
     val uiState: StateFlow<TierUiState> = _uiState.asStateFlow()
