@@ -1140,7 +1140,7 @@ class CreditRepository(private val context: Context) {
     ) = withContext(Dispatchers.IO) {
         try {
             onProgress(5, "GitHub Releases の最新データを問い合わせ中...")
-            val releaseUrl = AppConfig.LATEST_RELEASE_API_URL
+            val releaseUrl = AppConfig.RELEASES_API_URL
             val conn = (URL(releaseUrl).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10000
                 readTimeout = 15000
@@ -1159,19 +1159,28 @@ class CreditRepository(private val context: Context) {
             }
 
             val responseText = conn.inputStream.bufferedReader().use { it.readText() }
-            val releaseJson = json.parseToJsonElement(responseText).jsonObject
-            val tagName = releaseJson["tag_name"]?.jsonPrimitive?.content ?: "latest"
-            val assets = releaseJson["assets"]?.jsonArray ?: JsonArray(emptyList())
+            val releases = json.parseToJsonElement(responseText) as? JsonArray ?: JsonArray(emptyList())
 
-            val dbAsset = assets.firstOrNull {
-                val aName = it.jsonObject["name"]?.jsonPrimitive?.content ?: ""
-                aName == "creditdb.zip" || aName == AppConfig.DB_ASSET_NAME
-            }?.jsonObject
+            fun findDbAsset(release: JsonObject): JsonObject? {
+                val assets = release["assets"]?.jsonArray ?: return null
+                return assets.firstOrNull {
+                    val aName = it.jsonObject["name"]?.jsonPrimitive?.content ?: ""
+                    aName == "creditdb.zip" || aName == AppConfig.DB_ASSET_NAME
+                }?.jsonObject
+            }
 
-            if (dbAsset == null) {
-                onProgress(100, "最新リリース ($tagName) 内に creditdb.zip または creditdb.db が見つかりませんでした。")
+            // 一覧は新しい順。下書きを除き、DB を含む最初の Release を使う
+            val releaseJson = releases.asSequence()
+                .map { it.jsonObject }
+                .filter { it["draft"]?.jsonPrimitive?.content != "true" }
+                .firstOrNull { findDbAsset(it) != null }
+
+            if (releaseJson == null) {
+                onProgress(100, "creditdb.zip を含むリリースが見つかりませんでした。")
                 return@withContext
             }
+            val tagName = releaseJson["tag_name"]?.jsonPrimitive?.content ?: "latest"
+            val dbAsset = findDbAsset(releaseJson)!!
 
             val assetFileName = dbAsset["name"]?.jsonPrimitive?.content ?: AppConfig.DB_ASSET_NAME
             val downloadUrl = dbAsset["browser_download_url"]?.jsonPrimitive?.content
@@ -1243,6 +1252,7 @@ class CreditRepository(private val context: Context) {
 
             if (success) {
                 cachedSummary = null // キャッシュ破棄
+                com.creditdb.pro.data.tier.WorkImageResolver.invalidate()
                 onProgress(95, "新しいデータベースへ再接続中...")
                 val newSummary = getSummary()
                 delay(200)
