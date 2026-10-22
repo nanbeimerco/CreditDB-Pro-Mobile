@@ -20,6 +20,9 @@ val DarkOnSurfaceVariant = Color(0xFFC4C7C5)
 
 val DarkSurfaceContainer = Color(0xFF1D2024)
 val DarkSurfaceContainerHigh = Color(0xFF282A2F)
+val DarkSurfaceContainerLowest = Color(0xFF0C0E13)
+val DarkSurfaceContainerLow = Color(0xFF191C20)
+val DarkSurfaceContainerHighest = Color(0xFF33353A)
 
 val DarkOutline = Color(0xFF8E918F)
 val DarkOutlineVariant = Color(0xFF444746)
@@ -33,6 +36,9 @@ val LightSurfaceVariant = Color(0xFFE0E2EC)
 val LightOnSurfaceVariant = Color(0xFF44474F)
 val LightSurfaceContainer = Color(0xFFF0F0F4)
 val LightSurfaceContainerHigh = Color(0xFFE8E8EC)
+val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
+val LightSurfaceContainerLow = Color(0xFFF4F4F8)
+val LightSurfaceContainerHighest = Color(0xFFE2E2E6)
 val LightOutline = Color(0xFF74777F)
 val LightOutlineVariant = Color(0xFFC4C7D0)
 
@@ -185,18 +191,20 @@ object ColorPresets {
 
     fun createDarkColorScheme(preset: ColorPresetSpec): ColorScheme {
         return darkColorScheme(
-            primary = preset.primary,
-            onPrimary = preset.onPrimary,
-            primaryContainer = preset.primaryContainer,
-            onPrimaryContainer = preset.onPrimaryContainer,
-            secondary = preset.secondary,
-            onSecondary = preset.onSecondary,
-            secondaryContainer = preset.secondaryContainer,
-            onSecondaryContainer = preset.onSecondaryContainer,
-            tertiary = preset.tertiary,
-            onTertiary = preset.onTertiary,
-            tertiaryContainer = preset.tertiaryContainer,
-            onTertiaryContainer = preset.onTertiaryContainer,
+            // プリセットはダークテーマ用の明るいトーンで定義されているため、
+            // ライトテーマではトーンを入れ替えて文字のコントラストを確保する
+            primary = preset.primaryContainer,
+            onPrimary = Color.White,
+            primaryContainer = preset.onPrimaryContainer,
+            onPrimaryContainer = preset.onPrimary,
+            secondary = preset.secondaryContainer,
+            onSecondary = Color.White,
+            secondaryContainer = preset.onSecondaryContainer,
+            onSecondaryContainer = preset.onSecondary,
+            tertiary = preset.tertiaryContainer,
+            onTertiary = Color.White,
+            tertiaryContainer = preset.onTertiaryContainer,
+            onTertiaryContainer = preset.onTertiary,
             background = DarkBackground,
             onBackground = DarkOnBackground,
             surface = DarkSurface,
@@ -205,6 +213,9 @@ object ColorPresets {
             onSurfaceVariant = DarkOnSurfaceVariant,
             surfaceContainer = DarkSurfaceContainer,
             surfaceContainerHigh = DarkSurfaceContainerHigh,
+            surfaceContainerLowest = DarkSurfaceContainerLowest,
+            surfaceContainerLow = DarkSurfaceContainerLow,
+            surfaceContainerHighest = DarkSurfaceContainerHighest,
             outline = DarkOutline,
             outlineVariant = DarkOutlineVariant
         )
@@ -212,18 +223,20 @@ object ColorPresets {
 
     fun createLightColorScheme(preset: ColorPresetSpec): ColorScheme {
         return lightColorScheme(
-            primary = preset.primary,
-            onPrimary = preset.onPrimary,
-            primaryContainer = preset.primaryContainer,
-            onPrimaryContainer = preset.onPrimaryContainer,
-            secondary = preset.secondary,
-            onSecondary = preset.onSecondary,
-            secondaryContainer = preset.secondaryContainer,
-            onSecondaryContainer = preset.onSecondaryContainer,
-            tertiary = preset.tertiary,
-            onTertiary = preset.onTertiary,
-            tertiaryContainer = preset.tertiaryContainer,
-            onTertiaryContainer = preset.onTertiaryContainer,
+            // プリセットはダークテーマ用の明るいトーンで定義されているため、
+            // ライトテーマではトーンを入れ替えて文字のコントラストを確保する
+            primary = preset.primaryContainer,
+            onPrimary = Color.White,
+            primaryContainer = preset.onPrimaryContainer,
+            onPrimaryContainer = preset.onPrimary,
+            secondary = preset.secondaryContainer,
+            onSecondary = Color.White,
+            secondaryContainer = preset.onSecondaryContainer,
+            onSecondaryContainer = preset.onSecondary,
+            tertiary = preset.tertiaryContainer,
+            onTertiary = Color.White,
+            tertiaryContainer = preset.onTertiaryContainer,
+            onTertiaryContainer = preset.onTertiary,
             background = LightBackground,
             onBackground = LightOnBackground,
             surface = LightSurface,
@@ -232,6 +245,9 @@ object ColorPresets {
             onSurfaceVariant = LightOnSurfaceVariant,
             surfaceContainer = LightSurfaceContainer,
             surfaceContainerHigh = LightSurfaceContainerHigh,
+            surfaceContainerLowest = LightSurfaceContainerLowest,
+            surfaceContainerLow = LightSurfaceContainerLow,
+            surfaceContainerHighest = LightSurfaceContainerHighest,
             outline = LightOutline,
             outlineVariant = LightOutlineVariant
         )

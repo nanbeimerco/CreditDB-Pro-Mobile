@@ -1,6 +1,8 @@
 package com.creditdb.pro.ui.works
 
 import androidx.compose.animation.AnimatedVisibility
+import com.creditdb.pro.ui.theme.accent
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +40,7 @@ import com.creditdb.pro.ui.components.DualTierBadge
 import com.creditdb.pro.ui.components.MetricCard
 import com.creditdb.pro.ui.components.RoleBadge
 import com.creditdb.pro.ui.components.TierBadge
+import com.creditdb.pro.ui.components.LargeTierBadge
 import com.creditdb.pro.ui.components.VerdictBadge
 import com.creditdb.pro.ui.theme.TierTheme
 import com.creditdb.pro.ui.theme.VerdictSurprise
@@ -98,7 +101,7 @@ fun WorkDetailScreen(
                     .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppLoadingIndicator(contained = true, size = 56.dp)
             }
         } else if (workDetail == null) {
             Box(
@@ -127,30 +130,57 @@ fun WorkDetailScreen(
             ) {
                 // 1. タイトル & 基本情報ヘッダー
                 item {
+                    // M3 Expressive ヒーロー: カバー画像 + Tier の形状バッジ
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val coverUrl = remember(work.id) {
+                        com.creditdb.pro.data.tier.WorkImageResolver.getCoverImageUrl(work.id, ctx)
+                    }
+                    // percentile は「下位からの割合」(1位 = 100) なので、上位何%かに変換する
+                    val topPercent = (100.0 - work.percentile).coerceAtLeast(0.1)
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Start,
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                TierBadge(tier = work.tier, prefix = "Tier ")
+                                if (coverUrl != null) {
+                                    coil.compose.AsyncImage(
+                                        model = coverUrl,
+                                        contentDescription = primaryTitle,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier
+                                            .width(88.dp)
+                                            .height(124.dp)
+                                            .clip(MaterialTheme.shapes.large)
+                                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                                    )
+                                }
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    LargeTierBadge(tier = work.tier)
+                                    Text(
+                                        text = if (isEn) "Top ${String.format("%.1f", topPercent)}%" else "上位 ${String.format("%.1f", topPercent)}%",
+                                        style = MaterialTheme.typography.labelLargeEmphasized,
+                                        color = tierSpec.accent
+                                    )
+                                }
                             }
 
                             Text(
                                 text = primaryTitle,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.ExtraBold,
+                                style = MaterialTheme.typography.headlineSmallEmphasized,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
 
@@ -163,11 +193,7 @@ fun WorkDetailScreen(
                             }
 
                             Text(
-                                text = if (isEn) {
-                                    "Released: ${work.year} (Top ${String.format("%.1f", work.percentile)}%)"
-                                } else {
-                                    "公開年: ${work.year}年 (上位 ${String.format("%.1f", work.percentile)}%)"
-                                },
+                                text = if (isEn) "Released: ${work.year}" else "公開年: ${work.year}年",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -233,7 +259,7 @@ fun WorkDetailScreen(
                                 title = if (isEn) "Deviation Score" else "偏差値",
                                 value = String.format("%.1f", work.deviationScore),
                                 subValue = if (isEn) "Overall #${work.deviationRank}" else "総合 #${work.deviationRank}",
-                                valueColor = tierSpec.onContainerColor,
+                                valueColor = tierSpec.accent,
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
@@ -375,9 +401,8 @@ fun WorkDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onStudioClick(work.studio) },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -446,9 +471,8 @@ fun StaffRoleCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(
             modifier = Modifier

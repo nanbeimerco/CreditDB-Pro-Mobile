@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.predict
 
 import androidx.compose.foundation.background
+import com.creditdb.pro.ui.theme.accent
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -275,7 +276,7 @@ fun PredictScreen(
                                 text = String.format("%.1f", pred.deviationScore),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = tierSpec.onContainerColor
+                                color = tierSpec.accent
                             )
                         }
                     }
@@ -393,9 +394,8 @@ fun RoleCompositionRow(
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(
             modifier = Modifier
@@ -504,7 +504,7 @@ fun CompactDualTierBadge(
         ) {
             Text(
                 text = ratingTier,
-                color = rSpec.onContainerColor,
+                color = rSpec.accent,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 fontWeight = FontWeight.ExtraBold
             )
@@ -516,7 +516,7 @@ fun CompactDualTierBadge(
             )
             Text(
                 text = cumulativeTier,
-                color = cSpec.onContainerColor,
+                color = cSpec.accent,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 fontWeight = FontWeight.ExtraBold
             )

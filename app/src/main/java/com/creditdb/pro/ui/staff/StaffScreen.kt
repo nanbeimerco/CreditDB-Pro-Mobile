@@ -1,6 +1,8 @@
 package com.creditdb.pro.ui.staff
 
 import androidx.compose.foundation.background
+import com.creditdb.pro.ui.theme.accent
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -78,29 +80,13 @@ fun StaffScreen(
         )
 
         // 2. 11部門+スタジオ ロールセレクター (水平スクロール)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            roles.forEach { rKey ->
-                val isSelected = uiState.selectedRole == rKey
-                val displayName = com.creditdb.pro.data.RoleDefinitions.getShortDisplayName(rKey, isEn)
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { viewModel.onRoleSelect(rKey) },
-                    label = {
-                        Text(
-                            text = displayName,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                )
-            }
-        }
+        com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+            options = roles,
+            selected = uiState.selectedRole,
+            onSelect = { viewModel.onRoleSelect(it) },
+            label = { com.creditdb.pro.data.RoleDefinitions.getShortDisplayName(it, isEn) },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+        )
 
         // 2b. もう片方の指標のTier指定フィルタ (総合実力順のときは生涯累計実績Tier、生涯累計実績順のときは総合実力Tier)
         if (uiState.selectedRole != "studio") {
@@ -113,32 +99,24 @@ fun StaffScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 1.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = crossTierLabel,
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 2.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                tierOptions.forEach { tKey ->
-                    val isSelected = uiState.crossTierFilter == tKey
-                    val labelText = if (tKey == "all") (if (isEn) "All" else "全Tier") else tKey
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.onCrossTierSelect(tKey) },
-                        label = {
-                            Text(
-                                text = labelText,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)
-                            )
-                        }
-                    )
-                }
+                com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+                    options = tierOptions,
+                    selected = uiState.crossTierFilter,
+                    onSelect = { viewModel.onCrossTierSelect(it) },
+                    label = { if (it == "all") (if (isEn) "All" else "全Tier") else it },
+                    modifier = Modifier.weight(1f),
+                    compact = true
+                )
             }
         }
 
@@ -208,7 +186,7 @@ fun StaffScreen(
         Box(modifier = Modifier.weight(1f)) {
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    AppLoadingIndicator(contained = true, size = 56.dp)
                 }
             } else if (uiState.items.isEmpty()) {
                 val emptyText = if (isEn) {
@@ -255,11 +233,7 @@ fun StaffScreen(
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                AppLoadingIndicator(size = 32.dp)
                             }
                         }
                     }
@@ -298,12 +272,10 @@ fun CompactStaffCard(
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Row(
             modifier = Modifier
@@ -463,7 +435,7 @@ fun CompactStaffCard(
                             text = String.format("%+.3f", item.rating),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isRatingSort) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            color = ratingSpec.onContainerColor
+                            color = ratingSpec.accent
                         )
                     }
 
@@ -482,7 +454,7 @@ fun CompactStaffCard(
                             text = String.format("%+.2f", item.cumulativeZ),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (!isRatingSort) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            color = cumSpec.onContainerColor
+                            color = cumSpec.accent
                         )
                     }
                 }

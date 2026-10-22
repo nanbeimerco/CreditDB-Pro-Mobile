@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 data class TierColorSpec(
     val containerColor: Color,
@@ -92,3 +93,22 @@ object TierTheme {
         }
     }
 }
+
+/**
+ * 文字色として使う Tier 色。Tier 色は暗い背景向けの明るい色（Tone 80）なので、
+ * ライトテーマでは同じ色相のまま暗くしてコントラストを確保する。
+ */
+val TierColorSpec.accent: Color
+    @androidx.compose.runtime.Composable
+    get() = if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        onContainerColor
+    } else {
+        androidx.compose.ui.graphics.lerp(onContainerColor, Color.Black, 0.5f)
+    }
+
+/** 形状バッジの塗り（Tier 色そのもの）。上に載せる文字は TierBadgeTextColor を使う */
+val TierColorSpec.badgeFill: Color
+    get() = onContainerColor
+
+/** Tier 色の塗りの上に載せる文字色（ライト/ダーク共通で読みやすい濃色） */
+val TierBadgeTextColor = Color(0xFF1B1B1F)

@@ -105,20 +105,15 @@ fun TierExportDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf("1080p" to "FHD", "2K" to "2K QHD", "4K" to "4K UHD").forEach { (resKey, label) ->
-                                val isSelected = selectedResolution == resKey
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { selectedResolution = resKey },
-                                    label = { Text(label, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
+                        val resolutions = listOf("1080p" to "FHD", "2K" to "2K QHD", "4K" to "4K UHD")
+                        com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+                            options = resolutions.map { it.first },
+                            selected = selectedResolution,
+                            onSelect = { selectedResolution = it },
+                            label = { k -> resolutions.first { it.first == k }.second },
+                            scrollable = false,
+                            compact = true
+                        )
 
                         Spacer(modifier = Modifier.height(10.dp))
 

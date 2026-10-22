@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.compare
 
 import androidx.compose.foundation.background
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -72,28 +73,19 @@ fun CompareScreen(
         )
 
         // 2. クイック判定フィルタチップ (1行横スクロール)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val quickVerdicts = listOf(
-                "all" to if (isEn) "All" else "すべて",
-                "サプライズ名作" to if (isEn) "★ Surprise Hit" else "★ サプライズ名作",
-                "期待外れ" to if (isEn) "▼ Underperformed" else "▼ 期待外れ",
-                "概ねスタッフ前評判通り" to if (isEn) "● As Expected" else "● 前評判通り"
-            )
-            quickVerdicts.forEach { (key, label) ->
-                FilterChip(
-                    selected = uiState.selectedVerdict == key,
-                    onClick = { viewModel.onVerdictSelect(key) },
-                    label = { Text(label, style = MaterialTheme.typography.labelSmall) }
-                )
-            }
-        }
+        val quickVerdicts = listOf(
+            "all" to if (isEn) "All" else "すべて",
+            "サプライズ名作" to if (isEn) "★ Surprise Hit" else "★ サプライズ名作",
+            "期待外れ" to if (isEn) "▼ Underperformed" else "▼ 期待外れ",
+            "概ねスタッフ前評判通り" to if (isEn) "● As Expected" else "● 前評判通り"
+        )
+        com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+            options = quickVerdicts.map { it.first },
+            selected = uiState.selectedVerdict,
+            onSelect = { viewModel.onVerdictSelect(it) },
+            label = { k -> quickVerdicts.first { it.first == k }.second },
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+        )
 
         // 3. スリムステータスバー
         Row(
@@ -120,7 +112,7 @@ fun CompareScreen(
         Box(modifier = Modifier.weight(1f)) {
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    AppLoadingIndicator(contained = true, size = 56.dp)
                 }
             } else if (uiState.items.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -155,11 +147,7 @@ fun CompareScreen(
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                AppLoadingIndicator(size = 32.dp)
                             }
                         }
                     }

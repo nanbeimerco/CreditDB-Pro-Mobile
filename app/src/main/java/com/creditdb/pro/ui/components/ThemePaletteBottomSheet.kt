@@ -53,26 +53,23 @@ fun ThemePaletteBottomSheet(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = currentLang == com.creditdb.pro.ui.theme.AppLanguage.SYSTEM,
-                    onClick = { com.creditdb.pro.ui.theme.LanguageManager.setLanguage(com.creditdb.pro.ui.theme.AppLanguage.SYSTEM) },
-                    label = { Text(if (isEn) "System Default" else "端末設定依存") }
-                )
-                FilterChip(
-                    selected = currentLang == com.creditdb.pro.ui.theme.AppLanguage.JAPANESE,
-                    onClick = { com.creditdb.pro.ui.theme.LanguageManager.setLanguage(com.creditdb.pro.ui.theme.AppLanguage.JAPANESE) },
-                    label = { Text("日本語 (JP)") }
-                )
-                FilterChip(
-                    selected = currentLang == com.creditdb.pro.ui.theme.AppLanguage.ENGLISH,
-                    onClick = { com.creditdb.pro.ui.theme.LanguageManager.setLanguage(com.creditdb.pro.ui.theme.AppLanguage.ENGLISH) },
-                    label = { Text("English (EN)") }
-                )
-            }
+            SingleChoiceButtonGroup(
+                options = listOf(
+                    com.creditdb.pro.ui.theme.AppLanguage.SYSTEM,
+                    com.creditdb.pro.ui.theme.AppLanguage.JAPANESE,
+                    com.creditdb.pro.ui.theme.AppLanguage.ENGLISH
+                ),
+                selected = currentLang,
+                onSelect = { com.creditdb.pro.ui.theme.LanguageManager.setLanguage(it) },
+                label = {
+                    when (it) {
+                        com.creditdb.pro.ui.theme.AppLanguage.SYSTEM -> if (isEn) "System" else "端末設定"
+                        com.creditdb.pro.ui.theme.AppLanguage.JAPANESE -> "日本語"
+                        com.creditdb.pro.ui.theme.AppLanguage.ENGLISH -> "English"
+                    }
+                },
+                scrollable = false
+            )
 
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),

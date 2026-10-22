@@ -1,6 +1,8 @@
 package com.creditdb.pro.ui.staff
 
 import androidx.compose.animation.AnimatedVisibility
+import com.creditdb.pro.ui.theme.accent
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -93,7 +95,7 @@ fun StaffDetailScreen(
                     .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppLoadingIndicator(contained = true, size = 56.dp)
             }
         } else if (profile == null) {
             Box(
@@ -130,9 +132,8 @@ fun StaffDetailScreen(
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
                         Column(
                             modifier = Modifier
@@ -175,9 +176,8 @@ fun StaffDetailScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -196,7 +196,7 @@ fun StaffDetailScreen(
                                         text = String.format("%+.3f", prof.bayesianRating),
                                         style = MaterialTheme.typography.headlineMedium,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = TierTheme.forTier(prof.overallRatingTier).onContainerColor
+                                        color = TierTheme.forTier(prof.overallRatingTier).accent
                                     )
                                     Text(
                                         text = if (isEn) "#${prof.overallRank}" else "#${prof.overallRank} 位",
@@ -210,9 +210,8 @@ fun StaffDetailScreen(
 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -231,7 +230,7 @@ fun StaffDetailScreen(
                                         text = String.format("%+.2f", prof.careerCumulativeZ),
                                         style = MaterialTheme.typography.headlineMedium,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = TierTheme.forTier(prof.overallCumTier).onContainerColor
+                                        color = TierTheme.forTier(prof.overallCumTier).accent
                                     )
                                     Text(
                                         text = if (isEn) "#${prof.cumulativeRank}" else "#${prof.cumulativeRank} 位",
@@ -288,9 +287,8 @@ fun StaffDetailScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -357,7 +355,7 @@ fun StaffDetailScreen(
                                                             text = if (isEn) "Rating ${String.format("%+.3f", stat.bayesian_rating)}" else "実力 ${String.format("%+.3f", stat.bayesian_rating)}",
                                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                             fontWeight = FontWeight.Bold,
-                                                            color = statRatingSpec.onContainerColor
+                                                            color = statRatingSpec.accent
                                                         )
                                                         if (stat.rating_rank > 0) {
                                                             Text(
@@ -383,7 +381,7 @@ fun StaffDetailScreen(
                                                             text = if (isEn) "Cumul ${String.format("%+.2f", stat.career_cumulative_z)}" else "累計 ${String.format("%+.2f", stat.career_cumulative_z)}",
                                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                             fontWeight = FontWeight.Bold,
-                                                            color = statCumSpec.onContainerColor
+                                                            color = statCumSpec.accent
                                                         )
                                                         if (stat.cumulative_rank > 0) {
                                                             Text(
@@ -417,9 +415,8 @@ fun StaffDetailScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                         ) {
                             Column(
                                 modifier = Modifier

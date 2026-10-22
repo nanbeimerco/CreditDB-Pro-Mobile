@@ -1,6 +1,8 @@
 package com.creditdb.pro.ui.staff
 
 import androidx.compose.foundation.background
+import com.creditdb.pro.ui.theme.accent
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -135,7 +137,7 @@ fun StudioDetailScreen(
                     .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                AppLoadingIndicator(contained = true, size = 56.dp)
             }
         } else {
             val primaryStudioName = com.creditdb.pro.data.StaffNameResolver.getStudioName(studioName, isEn)
@@ -152,9 +154,8 @@ fun StudioDetailScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
                         Column(
                             modifier = Modifier
@@ -226,14 +227,14 @@ fun StudioDetailScreen(
 
                 // 2. セグメント切り替えタブ (主要制作陣 / 制作作品一覧)
                 item {
-                    TabRow(
+                    PrimaryTabRow(
                         selectedTabIndex = selectedTabIndex,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                         contentColor = MaterialTheme.colorScheme.primary,
                         divider = {},
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(MaterialTheme.shapes.large)
                     ) {
                         Tab(
                             selected = selectedTabIndex == 0,
@@ -341,42 +342,16 @@ fun StudioDetailScreen(
                                         )
                                     }
 
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        FilterChip(
-                                            selected = sortOption == "weighted",
-                                            onClick = { sortOption = "weighted" },
-                                            label = {
-                                                Text(
-                                                    text = if (isEn) "Contribution" else "主要貢献度順",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            },
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                            ),
-                                            modifier = Modifier.height(28.dp)
-                                        )
-                                        FilterChip(
-                                            selected = sortOption == "count",
-                                            onClick = { sortOption = "count" },
-                                            label = {
-                                                Text(
-                                                    text = if (isEn) "Total Works" else "参加作品数順",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            },
-                                            shape = RoundedCornerShape(8.dp),
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                            ),
-                                            modifier = Modifier.height(28.dp)
-                                        )
-                                    }
+                                    com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+                                        options = listOf("weighted", "count"),
+                                        selected = sortOption,
+                                        onSelect = { sortOption = it },
+                                        label = {
+                                            if (it == "weighted") (if (isEn) "Contribution" else "貢献度順")
+                                            else (if (isEn) "Works" else "作品数順")
+                                        },
+                                        compact = true
+                                    )
                                 }
                             } else {
                                 val currentDeptLabel = DEPARTMENTS.firstOrNull { it.key == selectedDept }
@@ -421,9 +396,8 @@ fun StudioDetailScreen(
                                     .clickable(enabled = onStaffClick != null) {
                                         onStaffClick?.invoke(member.name)
                                     },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                                shape = MaterialTheme.shapes.large,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -610,9 +584,8 @@ fun StudioDetailScreen(
                         item {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+                                shape = MaterialTheme.shapes.large,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -670,7 +643,7 @@ fun StudioDetailScreen(
                                                     text = String.format("%.1f", item.deviationScore),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = itemTierSpec.onContainerColor
+                                                    color = itemTierSpec.accent
                                                 )
                                                 TierBadge(tier = item.tier, prefix = "")
                                                 Icon(
