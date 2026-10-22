@@ -191,20 +191,19 @@ object ColorPresets {
 
     fun createDarkColorScheme(preset: ColorPresetSpec): ColorScheme {
         return darkColorScheme(
-            // プリセットはダークテーマ用の明るいトーンで定義されているため、
-            // ライトテーマではトーンを入れ替えて文字のコントラストを確保する
-            primary = preset.primaryContainer,
-            onPrimary = Color.White,
-            primaryContainer = preset.onPrimaryContainer,
-            onPrimaryContainer = preset.onPrimary,
-            secondary = preset.secondaryContainer,
-            onSecondary = Color.White,
-            secondaryContainer = preset.onSecondaryContainer,
-            onSecondaryContainer = preset.onSecondary,
-            tertiary = preset.tertiaryContainer,
-            onTertiary = Color.White,
-            tertiaryContainer = preset.onTertiaryContainer,
-            onTertiaryContainer = preset.onTertiary,
+            // プリセットはダークテーマ用のトーンで定義されているので、そのまま使う
+            primary = preset.primary,
+            onPrimary = preset.onPrimary,
+            primaryContainer = preset.primaryContainer,
+            onPrimaryContainer = preset.onPrimaryContainer,
+            secondary = preset.secondary,
+            onSecondary = preset.onSecondary,
+            secondaryContainer = preset.secondaryContainer,
+            onSecondaryContainer = preset.onSecondaryContainer,
+            tertiary = preset.tertiary,
+            onTertiary = preset.onTertiary,
+            tertiaryContainer = preset.tertiaryContainer,
+            onTertiaryContainer = preset.onTertiaryContainer,
             background = DarkBackground,
             onBackground = DarkOnBackground,
             surface = DarkSurface,
