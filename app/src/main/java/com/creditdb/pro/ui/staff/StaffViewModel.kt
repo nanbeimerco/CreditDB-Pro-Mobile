@@ -25,14 +25,17 @@ data class StaffUiState(
     val selectedRole: String = "all",
     val debutEra: DebutEraFilter = DebutEraFilter.ALL,
     val searchQuery: String = "",
-    val sortOption: StaffSortOption = StaffSortOption.RATING,
+    val sortOption: StaffSortOption = DEFAULT_STAFF_SORT,
     val crossTierFilter: String = "all",
     val hasMore: Boolean = true,
     val showFilterSheet: Boolean = false
 ) {
     val hasActiveFilters: Boolean
-        get() = debutEra != DebutEraFilter.ALL || sortOption != StaffSortOption.RATING || crossTierFilter != "all"
+        get() = debutEra != DebutEraFilter.ALL || sortOption != DEFAULT_STAFF_SORT || crossTierFilter != "all"
 }
+
+/** スタッフ一覧の既定の並び順（生涯累計実績順） */
+val DEFAULT_STAFF_SORT = StaffSortOption.CUMULATIVE
 
 class StaffViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = CreditRepository(application)
@@ -95,13 +98,13 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetFilters() {
         if (_uiState.value.debutEra == DebutEraFilter.ALL &&
-            _uiState.value.sortOption == StaffSortOption.RATING &&
+            _uiState.value.sortOption == DEFAULT_STAFF_SORT &&
             _uiState.value.crossTierFilter == "all"
         ) return
         _uiState.update {
             it.copy(
                 debutEra = DebutEraFilter.ALL,
-                sortOption = StaffSortOption.RATING,
+                sortOption = DEFAULT_STAFF_SORT,
                 crossTierFilter = "all"
             )
         }

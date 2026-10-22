@@ -75,20 +75,18 @@ fun WorksScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            com.creditdb.pro.ui.components.CountLabel(
                 text = if (isEn) "${uiState.totalCount} works" else "${uiState.totalCount} 件の作品",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.weight(1f)
             )
-            Text(
+            com.creditdb.pro.ui.components.SortLabelPill(
                 text = uiState.sortOption.getDisplayName(isEn),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+                onClick = { viewModel.setFilterSheetVisible(true) },
+                modifier = Modifier.weight(1f, fill = false)
             )
         }
 

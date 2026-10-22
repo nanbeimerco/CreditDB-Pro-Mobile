@@ -92,19 +92,17 @@ fun CompareScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            com.creditdb.pro.ui.components.CountLabel(
                 text = if (isEn) "${uiState.totalCount} comparisons" else "${uiState.totalCount} 件の対比データ",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.weight(1f)
             )
-            Text(
+            com.creditdb.pro.ui.components.SortLabelPill(
                 text = uiState.sortOption.getDisplayName(isEn),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+                onClick = { viewModel.setFilterSheetVisible(true) },
+                modifier = Modifier.weight(1f, fill = false)
             )
         }
 
