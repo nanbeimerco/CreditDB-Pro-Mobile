@@ -38,7 +38,7 @@ data class StaffUiState(
 val DEFAULT_STAFF_SORT = StaffSortOption.CUMULATIVE
 
 class StaffViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CreditRepository(application)
+    private val repository = CreditRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow(StaffUiState())
     val uiState: StateFlow<StaffUiState> = _uiState.asStateFlow()

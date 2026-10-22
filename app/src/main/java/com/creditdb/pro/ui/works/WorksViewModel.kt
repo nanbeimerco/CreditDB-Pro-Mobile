@@ -34,7 +34,7 @@ data class WorksUiState(
 }
 
 class WorksViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CreditRepository(application)
+    private val repository = CreditRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow(WorksUiState())
     val uiState: StateFlow<WorksUiState> = _uiState.asStateFlow()

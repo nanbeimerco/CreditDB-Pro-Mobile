@@ -37,7 +37,7 @@ data class PredictUiState(
 )
 
 class PredictViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CreditRepository(application)
+    private val repository = CreditRepository.getInstance(application)
     private val prefs = application.getSharedPreferences("predict_presets", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 

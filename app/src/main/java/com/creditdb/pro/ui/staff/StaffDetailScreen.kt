@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -50,7 +51,7 @@ fun StaffDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val repository = remember { CreditRepository(context) }
+    val repository = remember { CreditRepository.getInstance(context) }
     var profile by remember { mutableStateOf<StaffProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showAdvancedRoleStats by remember { mutableStateOf(false) }
@@ -119,10 +120,11 @@ fun StaffDetailScreen(
                     .padding(innerPadding)
                     .fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // 1. スタッフ名ヘッダーカード
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     val primaryName = if (isEn) {
                         com.creditdb.pro.data.StaffNameResolver.getStaffName(prof.name, true)
                     } else {
@@ -170,9 +172,11 @@ fun StaffDetailScreen(
                         }
                     }
                 }
+                }
 
                 // 2. 2大サマリーカード: 総合実力 S(a) & 生涯累積実績 ΣZ
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -243,10 +247,12 @@ fun StaffDetailScreen(
                         }
                     }
                 }
+                }
 
                 // 3. 部門別実績セクション
                 if (prof.allRoleStats.isNotEmpty()) {
                     item {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -283,8 +289,11 @@ fun StaffDetailScreen(
                             )
                         }
                     }
+                    }
 
                     item {
+
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large,
@@ -399,11 +408,14 @@ fun StaffDetailScreen(
                             }
                         }
                     }
+
+                    }
                 }
 
                 // 4. キャリア参加作品一覧 (Career Trajectory)
                 if (prof.careerTrajectory.isNotEmpty()) {
                     item {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Text(
                             text = if (isEn) "Filmography (${prof.careerTrajectory.size} works)" else "参加作品一覧 (全 ${prof.careerTrajectory.size} 作品)",
                             style = MaterialTheme.typography.titleSmall,
@@ -411,26 +423,21 @@ fun StaffDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+                    }
 
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                    itemsIndexed(
+                        items = prof.careerTrajectory,
+                        key = { index, traj -> "${traj.work_id}_${traj.role}_$index" }
+                    ) { index, traj ->
+                        com.creditdb.pro.ui.components.GroupedListItem(
+                            index = index,
+                            count = prof.careerTrajectory.size,
+                            onClick = { onWorkClick(traj.work_id) }
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                prof.careerTrajectory.forEach { traj ->
                                     Row(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable { onWorkClick(traj.work_id) }
-                                            .padding(horizontal = 8.dp, vertical = 7.dp),
+    .fillMaxWidth()
+    .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
@@ -516,8 +523,6 @@ fun StaffDetailScreen(
                                         }
                                     }
                                 }
-                            }
-                        }
                     }
                 }
             }

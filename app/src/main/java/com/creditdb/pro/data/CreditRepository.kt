@@ -19,6 +19,20 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class CreditRepository(private val context: Context) {
+    companion object {
+        @Volatile
+        private var instance: CreditRepository? = null
+
+        /**
+         * アプリ全体で1つだけ使う。画面ごとに作り直すと、作品英題の対応表などのキャッシュを
+         * 毎回作り直すことになり、読み込みが遅くなる。
+         */
+        fun getInstance(context: Context): CreditRepository =
+            instance ?: synchronized(this) {
+                instance ?: CreditRepository(context.applicationContext).also { instance = it }
+            }
+    }
+
     private val dbHelper = DatabaseHelper.getInstance(context)
     private val predictionEngine = PredictionEngine.getInstance(context)
     private val json = Json { ignoreUnknownKeys = true }
@@ -1252,6 +1266,8 @@ class CreditRepository(private val context: Context) {
 
             if (success) {
                 cachedSummary = null // キャッシュ破棄
+                workIdToTitleEnCache = null
+                titleToTitleEnCache = null
                 com.creditdb.pro.data.tier.WorkImageResolver.invalidate()
                 onProgress(95, "新しいデータベースへ再接続中...")
                 val newSummary = getSummary()

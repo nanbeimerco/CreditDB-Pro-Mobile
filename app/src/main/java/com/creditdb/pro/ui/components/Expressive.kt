@@ -145,6 +145,40 @@ fun SortLabelPill(
     }
 }
 
+/**
+ * 長い一覧（参加作品・制作作品など）の1行。LazyColumn の1項目として使い、表示される行だけを描画する。
+ * 見た目はひとまとまりのグループ（先頭と末尾だけ大きな角丸、行の間は小さな角丸と2dpの隙間）。
+ */
+@Composable
+fun GroupedListItem(
+    index: Int,
+    count: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val large = 20.dp
+    val small = 4.dp
+    val isFirst = index == 0
+    val isLast = index == count - 1
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(
+        topStart = if (isFirst) large else small,
+        topEnd = if (isFirst) large else small,
+        bottomStart = if (isLast) large else small,
+        bottomEnd = if (isLast) large else small
+    )
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = if (isLast) 0.dp else 2.dp)
+    ) {
+        content()
+    }
+}
+
 /** 一覧の件数表示（例: 21728 作品） */
 @Composable
 fun CountLabel(text: String, modifier: Modifier = Modifier) {

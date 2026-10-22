@@ -32,7 +32,7 @@ data class CompareUiState(
 }
 
 class CompareViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CreditRepository(application)
+    private val repository = CreditRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow(CompareUiState())
     val uiState: StateFlow<CompareUiState> = _uiState.asStateFlow()
