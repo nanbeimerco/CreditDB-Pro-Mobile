@@ -488,6 +488,19 @@ fun StaffDetailScreen(
                                                 )
                                             }
 
+                                            // 担当話（AniList の話数付きクレジット）
+                                            val epText = com.creditdb.pro.data.formatEpisodes(traj.eps, traj.parts, isEn)
+                                            if (epText != null) {
+                                                Text(
+                                                    text = if (isEn) "Worked on: $epText" else "担当: $epText",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+                                                )
+                                            }
+
                                             // 声優のキャラクター役名が存在する場合は表示
                                             val displayCharName = traj.getDisplayCharacterName(isEn)
                                             if (!displayCharName.isNullOrBlank()) {

@@ -17,6 +17,8 @@ import gzip
 import json
 import time
 import hashlib
+import math
+import statistics
 import sqlite3
 import datetime
 import unicodedata
@@ -26,6 +28,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 from collections import defaultdict
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # tools/anilist_credits.py を読み込むため
 
 # Ensure UTF-8 output across Windows and CI environments
 if sys.platform == "win32":
@@ -174,6 +178,10 @@ def count_total_staff(staff_json_str: str) -> int:
     return 0
 
 EXCLUDED_STAFF_ROLES = {"color_design", "photo_dir", "sound_dir"}
+
+# 話数で参加度が変わる役職と、話数データが足りないときの「1話あたりの人数」の既定値
+EPISODE_ROLES = {"unit_director", "sakkan", "genga", "genga_2nd"}
+DEFAULT_PEOPLE_PER_EPISODE = {"unit_director": 2.0, "sakkan": 3.0, "genga": 12.0, "genga_2nd": 10.0}
 # Old data stores 2nd key animation under this key; it is folded into genga_2nd.
 LEGACY_GENGA_2ND_KEYS = ("genga_second",)
 
@@ -730,7 +738,9 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
     conn.commit()
     print(f"  -> {len(works_update_batch)} 評価済み作品のZスコア・偏差値・Tierを更新しました。")
 
-    cur.execute("SELECT work_id, title, year, staff_json, characters_json FROM works")
+    work_cols = {r[1] for r in cur.execute("PRAGMA table_info(works)")}
+    ep_col = "episodes" if "episodes" in work_cols else "NULL"
+    cur.execute(f"SELECT work_id, title, year, staff_json, characters_json, {ep_col} FROM works")
     all_works_data = cur.fetchall()
 
     staff_overall = defaultdict(list)
@@ -738,49 +748,76 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
     rel_weights = {"主角": 1.0, "配角": 0.5, "客串": 0.2, "MAIN": 1.0, "SUPPORTING": 0.5, "BACKGROUND": 0.2}
     sanitized_updates = []
 
-    for wid, title, yr, s_json, c_json in all_works_data:
+    # --- 参加度（話数補正）の準備 ---------------------------------------------
+    # 1回目: staff_json を正規化し、話数データのある作品から「1話あたりの人数」を役職ごとに推定する
+    parsed_staff = {}
+    per_ep_samples = defaultdict(list)
+    for wid, title, yr, s_json, c_json, n_eps in all_works_data:
+        if not s_json:
+            continue
+        try:
+            s_map = json.loads(s_json)
+        except Exception:
+            continue
+        s_map, was_sanitized = sanitize_staff_dict(s_map)
+        parsed_staff[wid] = s_map
+        if was_sanitized:
+            sanitized_updates.append((json.dumps(s_map, ensure_ascii=False), wid))
+        E = int(n_eps or 0)
+        if E >= 2:
+            for role in EPISODE_ROLES:
+                lst = [x for x in s_map.get(role, []) if isinstance(x, dict)]
+                with_eps = [x for x in lst if x.get("eps")]
+                if lst and len(with_eps) >= 0.5 * len(lst):
+                    per_ep_samples[role].append(sum(len(x["eps"]) for x in with_eps) / E)
+    people_per_ep = {
+        r: (statistics.median(per_ep_samples[r]) if len(per_ep_samples[r]) >= 20 else DEFAULT_PEOPLE_PER_EPISODE[r])
+        for r in EPISODE_ROLES
+    }
+    print("  -> 1話あたりの人数（推定）: " + ", ".join(f"{r} {people_per_ep[r]:.1f} (n={len(per_ep_samples[r])})" for r in sorted(EPISODE_ROLES)))
+
+    def participation(role, person, n_in_role, n_eps):
+        """作品への参加度 (0〜1]。話数が分かればその割合、分からなければ人数から推定する"""
+        if role not in EPISODE_ROLES:
+            return 1.0, None
+        eps = person.get("eps") if isinstance(person, dict) else None
+        if eps:
+            total = max(int(n_eps or 0), max(eps))
+            return min(1.0, len(eps) / total), eps
+        return min(1.0, people_per_ep[role] / max(1, n_in_role)), None
+
+    ep_known = ep_total = 0
+    for wid, title, yr, s_json, c_json, n_eps in all_works_data:
         year = int(yr or 0)
         z = work_zscores.get(wid, 0.0)
+        s_map = parsed_staff.get(wid)
 
-        if s_json:
-            try:
-                s_map = json.loads(s_json)
-                s_map, was_sanitized = sanitize_staff_dict(s_map)
-                if was_sanitized:
-                    sanitized_updates.append((json.dumps(s_map, ensure_ascii=False), wid))
-                for role in ["director", "series_comp", "char_design", "unit_director", "sakkan", "music", "art_dir"]:
-                    names = s_map.get(role, [])
-                    if isinstance(names, str):
-                        names = [names]
-                    for n in names:
-                        name = n.get("name") if isinstance(n, dict) else str(n)
-                        name = name.strip() if name else ""
-                        if name:
-                            rec = {"work_id": wid, "title": title, "year": year, "role": role, "z": z, "w": 1.0}
-                            staff_overall[name].append(rec)
-                            staff_by_role[(role, name)].append(rec)
-
-                genga_list = s_map.get("genga", [])
-                if isinstance(genga_list, list):
-                    for g in genga_list:
-                        name = g.get("name") if isinstance(g, dict) else str(g)
-                        name = name.strip() if name else ""
-                        if name:
-                            rec = {"work_id": wid, "title": title, "year": year, "role": "genga", "z": z, "w": 1.0}
-                            staff_overall[name].append(rec)
-                            staff_by_role[("genga", name)].append(rec)
-
-                genga_2nd_list = s_map.get("genga_2nd", [])
-                if isinstance(genga_2nd_list, list):
-                    for g2 in genga_2nd_list:
-                        name = g2.get("name") if isinstance(g2, dict) else str(g2)
-                        name = name.strip() if name else ""
-                        if name:
-                            rec = {"work_id": wid, "title": title, "year": year, "role": "genga_2nd", "z": z, "w": 0.2}
-                            staff_overall[name].append(rec)
-                            staff_by_role[("genga_2nd", name)].append(rec)
-            except:
-                pass
+        if s_map:
+            for role in ["director", "series_comp", "char_design", "unit_director", "sakkan", "music", "art_dir", "genga", "genga_2nd"]:
+                names = s_map.get(role, [])
+                if isinstance(names, str):
+                    names = [names]
+                if not isinstance(names, list):
+                    continue
+                base_w = 0.2 if role == "genga_2nd" else 1.0
+                n_in_role = len(names)
+                for n in names:
+                    name = n.get("name") if isinstance(n, dict) else str(n)
+                    name = name.strip() if name else ""
+                    if not name:
+                        continue
+                    share, eps = participation(role, n, n_in_role, n_eps)
+                    if role in EPISODE_ROLES:
+                        ep_total += 1
+                        ep_known += 1 if eps else 0
+                    rec = {"work_id": wid, "title": title, "year": year, "role": role, "z": z,
+                           "w": base_w * math.sqrt(share), "share": share}
+                    if eps:
+                        rec["eps"] = eps
+                    if isinstance(n, dict) and n.get("parts"):
+                        rec["parts"] = n["parts"]
+                    staff_overall[name].append(rec)
+                    staff_by_role[(role, name)].append(rec)
 
         if c_json:
             try:
@@ -807,8 +844,19 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
     roles_list = ["all", "director", "series_comp", "char_design", "unit_director", "sakkan", "genga", "genga_2nd", "music", "art_dir", "cv"]
     lb_update_batch = []
 
+    # 参加度で重みが小さくなった分、縮小（m）も同じ割合で小さくして、縮小の強さを保つ
+    def _median_w(recs):
+        ws = [r["w"] for r in recs]
+        return statistics.median(ws) if ws else 1.0
+    m_scale = {r: _median_w([rec for (rr, _), recs in staff_by_role.items() if rr == r for rec in recs]) /
+                  (0.2 if r == "genga_2nd" else 1.0)
+               for r in EPISODE_ROLES}
+    m_scale["all"] = _median_w([rec for recs in staff_overall.values() for rec in recs if rec["role"] != "cv"])
+    print(f"  -> 話数が分かっている参加: {ep_known}/{ep_total} 件 / 縮小の調整係数: " +
+          ", ".join(f"{k} {v:.2f}" for k, v in sorted(m_scale.items())))
+
     for rKey in roles_list:
-        m_val = DEFAULT_ROLE_M.get(rKey, 6.0)
+        m_val = DEFAULT_ROLE_M.get(rKey, 6.0) * m_scale.get(rKey, 1.0)
         candidates = []
 
         if rKey == "all":
@@ -993,6 +1041,10 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
             }
             if "top_char" in rec and rec["top_char"]:
                 t_item["character_name"] = rec["top_char"]
+            if rec.get("eps"):
+                t_item["eps"] = rec["eps"]
+            if rec.get("parts"):
+                t_item["parts"] = rec["parts"]
             traj.append(t_item)
         traj.sort(key=lambda x: (x["year"], x["work_id"]))
 
@@ -1177,7 +1229,30 @@ def parse_args():
     p.add_argument("--out-dir", required=True, help="creditdb.zip と version.json の出力先")
     p.add_argument("--covers-seed", default=None, help="DBに work_covers テーブルが無い場合に使う work_covers.json")
     p.add_argument("--recalc-only", action="store_true", help="API取得をせず再計算だけ行う")
+    p.add_argument("--anilist-store", default=None, help="AniList 話数クレジットの保存先 (anilist_credits.zip)")
+    p.add_argument("--anilist-out", default=None, help="更新後の anilist_credits.zip の出力先")
+    p.add_argument("--anilist-minutes", type=float, default=25, help="AniList 再取得に使う時間の上限（分）")
     return p.parse_args()
+
+def refresh_anilist_recent(conn, store, current_year: int, minutes: float) -> dict:
+    """今年・来年の作品の AniList クレジットを再取得する（前回取得から6日以上たったものだけ）"""
+    import anilist_credits as ac
+    deadline = time.time() + minutes * 60
+    fresh = {r[0] for r in store.execute("SELECT work_id FROM media WHERE fetched_at >= datetime('now', '-6 days')")}
+    not_found = {r[0] for r in store.execute("SELECT work_id FROM idmap WHERE anilist_id IS NULL AND tried_at >= datetime('now', '-30 days')")}
+    targets = [r for r in conn.execute(
+        "SELECT work_id, title, title_en, year FROM works WHERE year >= ? ORDER BY anilist_raw_score DESC", (current_year,))
+        if r[0] not in fresh and r[0] not in not_found]
+    client = ac.AniListClient()
+    fetched = 0
+    for work_id, title, title_en, year in targets:
+        if time.time() > deadline:
+            break
+        aid = ac.anilist_id_of(work_id) or ac.resolve_anilist_id(client, store, work_id, title, year, title_en)
+        if aid and ac.fetch_work(client, store, work_id, aid):
+            fetched += 1
+    STATS["anilist_credit_refresh"] = fetched
+    return {"targets": len(targets), "fetched": fetched, "requests": client.requests}
 
 def load_db_bytes(path: Path) -> bytes:
     name = path.name.lower()
@@ -1475,6 +1550,20 @@ def main():
             print("[ERROR] API 取得に問題があるため、データベースを書き出さずに終了します。")
             sys.exit(1)
     write_step_summary(summary_lines)
+
+    # Step 3c: AniList の話数付きクレジットを取り込む（保存先が指定された場合）
+    if args.anilist_store or args.anilist_out:
+        import anilist_credits as ac
+        store = ac.open_store(Path(args.anilist_store) if args.anilist_store else None)
+        if not recalc_only:
+            r = refresh_anilist_recent(conn, store, current_year, args.anilist_minutes)
+            print(f"  [3c] AniList 話数クレジット再取得: 対象 {r['targets']} / 取得 {r['fetched']} / リクエスト {r['requests']}")
+        st = ac.apply_to_creditdb(conn, store)
+        n_media = store.execute("SELECT COUNT(*) FROM media").fetchone()[0]
+        print(f"  [3c] 話数クレジット反映: {st['works']} 作品 / 既存スタッフに話数付与 {st['attached']} / 追加 {st['added']} (保存済み {n_media} 作品)")
+        write_step_summary([f"| AniList 話数クレジット反映 | {st['works']} 作品（話数付与 {st['attached']} / 追加 {st['added']}） |"])
+        if args.anilist_out:
+            ac.save_store(store, Path(args.anilist_out))
 
     # Step 4: Recalculate all metrics & resolve staff tiers
     recalculate_all_metrics_and_resolve_tiers(conn)
