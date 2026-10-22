@@ -30,7 +30,11 @@ data class StaffCredit(
     val ratingTier: String = "B",
     val cumulativeTier: String = "B",
     val characterName: String? = null,
-    val relation: String? = null
+    val relation: String? = null,
+    /** 担当話（AniList の話数付きクレジット）。不明なら空 */
+    val episodes: List<Int> = emptyList(),
+    /** OP / ED などの担当 */
+    val parts: List<String> = emptyList()
 ) {
     fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String =
         StaffNameResolver.getStaffName(name, isEn)
@@ -47,7 +51,12 @@ data class StaffCredit(
                     val ct = el["ct"]?.jsonPrimitive?.content ?: "B"
                     val cName = el["character_name"]?.jsonPrimitive?.content
                     val rel = el["relation"]?.jsonPrimitive?.content
-                    StaffCredit(name = name, ratingTier = rt, cumulativeTier = ct, characterName = cName, relation = rel)
+                    val eps = (el["eps"] as? kotlinx.serialization.json.JsonArray)
+                        ?.mapNotNull { it.jsonPrimitive.content.toIntOrNull() } ?: emptyList()
+                    val parts = (el["parts"] as? kotlinx.serialization.json.JsonArray)
+                        ?.map { it.jsonPrimitive.content } ?: emptyList()
+                    StaffCredit(name = name, ratingTier = rt, cumulativeTier = ct, characterName = cName, relation = rel,
+                        episodes = eps, parts = parts)
                 }
                 is JsonPrimitive -> {
                     StaffCredit(name = el.content, ratingTier = "B", cumulativeTier = "B")
@@ -171,7 +180,9 @@ data class WorkDetail(
     val percentile: Double,
     val staffByRole: Map<String, List<StaffCredit>>,
     val characters: List<CharacterCast> = emptyList(),
-    val studio: String? = null
+    val studio: String? = null,
+    /** 全話数（AniList）。不明なら null */
+    val episodeCount: Int? = null
 ) {
     fun getDisplayTitle(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): Pair<String, String?> {
         val en = titleEn?.takeIf { it.isNotBlank() }
@@ -297,7 +308,10 @@ data class CareerTrajectoryItem(
     val z_score: Double,
     val character_name: String? = null,
     val character_relation: String? = null,
-    val work_title_en: String? = null
+    val work_title_en: String? = null,
+    /** 担当話（AniList の話数付きクレジット）。不明なら null */
+    val eps: List<Int>? = null,
+    val parts: List<String>? = null
 ) {
     fun getDisplayTitle(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String {
         return if (isEn && !work_title_en.isNullOrBlank()) work_title_en else work_title
@@ -537,5 +551,50 @@ object AppSettings {
     fun setAdvancedMetrics(enabled: Boolean) {
         isAdvancedMetricsEnabled = enabled
         prefs?.edit()?.putBoolean(KEY_ADVANCED_METRICS, enabled)?.apply()
+    }
+}
+
+/**
+ * 担当話を短く表示する。例: [1,2,3,7] + [OP] → "1〜3・7話, OP"
+ */
+fun formatEpisodes(eps: List<Int>?, parts: List<String>?, isEn: Boolean): String? {
+    val list = (eps ?: emptyList()).distinct().sorted()
+    val segs = mutableListOf<String>()
+    var i = 0
+    while (i < list.size) {
+        var j = i
+        while (j + 1 < list.size && list[j + 1] == list[j] + 1) j++
+        segs += if (j - i >= 2) "${list[i]}${if (isEn) "-" else "〜"}${list[j]}" else (i..j).joinToString(if (isEn) ", " else "・") { list[it].toString() }
+        i = j + 1
+    }
+    val epText = when {
+        segs.isEmpty() -> null
+        isEn -> (if (list.size == 1) "Ep " else "Eps ") + segs.joinToString(", ")
+        else -> segs.joinToString("・") + "話"
+    }
+    val all = listOfNotNull(epText) + (parts ?: emptyList())
+    return all.takeIf { it.isNotEmpty() }?.joinToString(", ")
+}
+
+/** 1話分の担当スタッフ（作品詳細の「各話スタッフ」用） */
+data class EpisodeStaff(
+    val episode: Int,
+    val unitDirectors: List<String>,
+    val animationDirectors: List<String>,
+    val keyAnimators: List<String>,
+    val secondKeyAnimators: List<String>
+)
+
+/** staff_json の話数付きクレジットから、各話の担当スタッフを組み立てる */
+fun buildEpisodeStaff(staffByRole: Map<String, List<StaffCredit>>): List<EpisodeStaff> {
+    fun byEp(role: String): Map<Int, List<String>> {
+        val m = sortedMapOf<Int, MutableList<String>>()
+        for (c in staffByRole[role].orEmpty()) for (e in c.episodes) m.getOrPut(e) { mutableListOf() }.add(c.name)
+        return m
+    }
+    val ud = byEp("unit_director"); val ad = byEp("sakkan"); val ka = byEp("genga"); val ka2 = byEp("genga_2nd")
+    val eps = (ud.keys + ad.keys + ka.keys + ka2.keys).toSortedSet()
+    return eps.map { e ->
+        EpisodeStaff(e, ud[e].orEmpty(), ad[e].orEmpty(), ka[e].orEmpty(), ka2[e].orEmpty())
     }
 }

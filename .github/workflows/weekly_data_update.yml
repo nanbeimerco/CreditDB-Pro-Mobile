@@ -18,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: weekly-data-update
+  group: creditdb-data # AniList 一括取得と同時に動かない
   cancel-in-progress: false
 
 env:
@@ -52,13 +52,17 @@ jobs:
           PREV_SHA=$(echo "$BODY" | grep -oE 'db-sha256: *[0-9a-f]{64}' | grep -oE '[0-9a-f]{64}' || true)
           mkdir -p work
           gh release download "$TAG" --pattern creditdb.zip --dir work
+          if gh release view anilist-credits >/dev/null 2>&1; then
+            gh release download anilist-credits --pattern anilist_credits.zip --dir work || true
+          fi
           echo "Previous release: $TAG (db-sha256: ${PREV_SHA:-unknown})"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "sha=$PREV_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Run weekly updater
         run: |
-          ARGS="--input work/creditdb.zip --out-dir out --covers-seed app/src/main/assets/work_covers.json"
+          ARGS="--input work/creditdb.zip --out-dir out --covers-seed app/src/main/assets/work_covers.json --anilist-out store/anilist_credits.zip"
+          if [ -f work/anilist_credits.zip ]; then ARGS="$ARGS --anilist-store work/anilist_credits.zip"; fi
           if [ "${{ inputs.recalc_only }}" = "true" ]; then ARGS="$ARGS --recalc-only"; fi
           python tools/weekly_updater.py $ARGS
 
@@ -108,6 +112,14 @@ jobs:
           files: |
             out/creditdb.zip
             out/version.json
+
+      - name: Upload AniList credit store
+        if: hashFiles('store/anilist_credits.zip') != ''
+        run: |
+          if ! gh release view anilist-credits >/dev/null 2>&1; then
+            gh release create anilist-credits --title "AniList credits store"               --notes "AniList の話数付きクレジットの保存先（ツール用。アプリは使わない）"               --prerelease --latest=false
+          fi
+          gh release upload anilist-credits store/anilist_credits.zip --clobber
 
       - name: Delete old data releases
         if: steps.check.outputs.changed == 'true'

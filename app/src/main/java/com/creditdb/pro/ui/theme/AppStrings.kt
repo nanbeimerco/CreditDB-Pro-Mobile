@@ -380,8 +380,8 @@ object AppStrings {
 
     fun anilistTitle(isEn: Boolean) = "AniList API (GraphQL)"
     fun anilistRole(isEn: Boolean) =
-        if (isEn) "Source for anime catalog metadata (titles, release years, episode counts, cover artwork) and global community weighted user ratings (AniList Raw Score)."
-        else "全世界のアニメ作品基本情報（タイトル、放映年、エピソード数、公式カバー画像）および海外レビュー加重平均スコア（AniList素点）の提供元。"
+        if (isEn) "Source for anime catalog metadata (titles, release years, episode counts, cover artwork), global community weighted user ratings (AniList Raw Score), and episode-level staff credits (which episodes each person worked on)."
+        else "全世界のアニメ作品基本情報（タイトル、放映年、エピソード数、公式カバー画像）、海外レビュー加重平均スコア（AniList素点）、および話数付きの制作クレジット（各スタッフの担当話）の提供元。"
 
     fun bangumiTitle(isEn: Boolean) = "Bangumi API (番組計画)"
     fun bangumiRole(isEn: Boolean) =
@@ -393,8 +393,8 @@ object AppStrings {
         else "膨大なアニメーション文化の記録をオープンなデータベース・APIとして公開・維持されている AniList および Bangumi の運営陣ならびにコントリビューターの皆様に深く敬意と感謝を表します。"
 
     fun workDetailDataFooter(isEn: Boolean) =
-        if (isEn) "Data: AniList API (Metadata & Scores) · Bangumi API (Credits)"
-        else "データ提供: AniList API（作品情報・海外評価） · Bangumi API（制作クレジット）"
+        if (isEn) "Data: AniList API (Metadata, Scores & Episode Credits) · Bangumi API (Credits)"
+        else "データ提供: AniList API（作品情報・海外評価・話数付きクレジット） · Bangumi API（制作クレジット）"
 
     fun datasetAttribution(isEn: Boolean) =
         if (isEn) "Dataset: AniList API & Bangumi API"

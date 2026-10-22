@@ -320,6 +320,15 @@ class CreditRepository(private val context: Context) {
 
         val charList = parseCharacters(charJsonStr)
 
+        // 全話数（AniList 由来の列。古い DB には列が無いので失敗は無視）
+        val episodeCount: Int? = try {
+            db.rawQuery("SELECT episodes FROM works WHERE work_id = ? LIMIT 1", arrayOf(workId)).use { c ->
+                if (c.moveToFirst() && !c.isNull(0)) c.getInt(0) else null
+            }
+        } catch (_: Exception) {
+            null
+        }
+
         if (charList.isNotEmpty()) {
             staffMap["cv"] = charList.map { c ->
                 StaffCredit(
@@ -352,7 +361,8 @@ class CreditRepository(private val context: Context) {
             percentile = cursor.getDouble(16),
             staffByRole = staffMap,
             characters = charList,
-            studio = cleanedStudio
+            studio = cleanedStudio,
+            episodeCount = episodeCount
         )
         cursor.close()
         detail

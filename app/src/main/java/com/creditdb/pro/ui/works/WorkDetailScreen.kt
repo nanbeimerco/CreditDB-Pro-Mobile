@@ -120,16 +120,18 @@ fun WorkDetailScreen(
             val work = workDetail!!
             val tierSpec = TierTheme.forTier(work.tier)
             val (primaryTitle, secondaryTitle) = work.getDisplayTitle(isEn)
+            val episodeStaff = remember(work) { com.creditdb.pro.data.buildEpisodeStaff(work.staffByRole) }
 
             LazyColumn(
                 modifier = modifier
                     .padding(innerPadding)
                     .fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // 1. タイトル & 基本情報ヘッダー
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     // M3 Expressive ヒーロー: カバー画像 + Tier の形状バッジ
                     val ctx = androidx.compose.ui.platform.LocalContext.current
                     val coverUrl = remember(work.id) {
@@ -200,9 +202,11 @@ fun WorkDetailScreen(
                         }
                     }
                 }
+                }
 
                 // 2. 数理指標グリッド (基本指標 + Advancedモード切り替え)
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -360,9 +364,11 @@ fun WorkDetailScreen(
                         }
                     }
                 }
+                }
 
                 // 3. 制作陣・声優クレジット (Role by Role)
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     Text(
                         text = if (isEn) "Staff & Cast Credits" else "制作陣・声優クレジット",
                         style = MaterialTheme.typography.titleSmall,
@@ -370,22 +376,62 @@ fun WorkDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+                }
 
                 work.staffByRole.forEach { (roleKey, staffList) ->
                     if (staffList.isNotEmpty()) {
                         item(key = roleKey) {
+                            Column(modifier = Modifier.padding(bottom = 16.dp)) {
                             StaffRoleCard(
                                 roleKey = roleKey,
                                 staffList = staffList,
                                 onStaffClick = onStaffClick
                             )
                         }
+                        }
+                    }
+                }
+
+                // 3b. 各話スタッフ（AniList の話数付きクレジット）
+                if (episodeStaff.isNotEmpty()) {
+                    item {
+                        Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                            Text(
+                                text = if (isEn) "Episode Staff" else "各話スタッフ",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            val total = work.episodeCount
+                            Text(
+                                text = if (isEn) {
+                                    "From AniList episode credits" + (if (total != null) " · ${episodeStaff.size} of $total episodes" else "")
+                                } else {
+                                    "AniList の話数付きクレジットより" + (if (total != null) "（全${total}話中 ${episodeStaff.size}話分）" else "")
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    itemsIndexed(
+                        items = episodeStaff,
+                        key = { _, ep -> "ep_${ep.episode}" }
+                    ) { index, ep ->
+                        EpisodeStaffRow(
+                            ep = ep,
+                            index = index,
+                            count = episodeStaff.size,
+                            onStaffClick = onStaffClick,
+                            modifier = Modifier.padding(bottom = if (index == episodeStaff.size - 1) 16.dp else 0.dp)
+                        )
                     }
                 }
 
                 // 4. 制作スタジオ（画面最下部に配置・タップで作品一覧）
                 if (!work.studio.isNullOrBlank()) {
                     item {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Text(
                             text = if (isEn) "Animation Studio" else "制作スタジオ",
                             style = MaterialTheme.typography.titleSmall,
@@ -393,10 +439,13 @@ fun WorkDetailScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+                    }
 
                     val studioDisplayName = com.creditdb.pro.data.StaffNameResolver.getStudioName(work.studio, isEn)
 
                     item {
+
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -433,10 +482,13 @@ fun WorkDetailScreen(
                             }
                         }
                     }
+
+                    }
                 }
 
                 // 5. データソース・クレジット表記（最下部フッター）
                 item {
+                    Column(modifier = Modifier.padding(bottom = 16.dp)) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(
                         modifier = Modifier
@@ -450,6 +502,7 @@ fun WorkDetailScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     }
+                }
                 }
             }
         }
@@ -550,6 +603,14 @@ fun StaffRoleCard(
                                 }
                             }
                         }
+                        val epText = com.creditdb.pro.data.formatEpisodes(staff.episodes, staff.parts, isEn)
+                        if (epText != null) {
+                            Text(
+                                text = epText,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                         val displayCharName = staff.getDisplayCharacterName(isEn)
                         if (!displayCharName.isNullOrBlank()) {
                             Text(
@@ -577,6 +638,108 @@ fun StaffRoleCard(
                         .clickable { expanded = true }
                         .padding(start = 6.dp, top = 2.dp)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * 各話スタッフの1行。タップで、その話の全スタッフ（原画を含む）を展開する。名前をタップでクリエイター詳細へ。
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun EpisodeStaffRow(
+    ep: com.creditdb.pro.data.EpisodeStaff,
+    index: Int,
+    count: Int,
+    onStaffClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    var expanded by remember { mutableStateOf(false) }
+    fun disp(n: String) = com.creditdb.pro.data.StaffNameResolver.getStaffName(n, isEn)
+    com.creditdb.pro.ui.components.GroupedListItem(
+        index = index,
+        count = count,
+        onClick = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (isEn) "Episode ${ep.episode}" else "第${ep.episode}話",
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                val ka = ep.keyAnimators.size + ep.secondKeyAnimators.size
+                if (ka > 0) {
+                    Text(
+                        text = if (isEn) "$ka key animators" else "原画 ${ka}人",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) (if (isEn) "Collapse" else "閉じる") else (if (isEn) "Expand" else "展開"),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (ep.unitDirectors.isNotEmpty()) {
+                Text(
+                    text = (if (isEn) "Storyboard / Ep. Director: " else "絵コンテ・演出: ") + ep.unitDirectors.joinToString(if (isEn) ", " else "、") { disp(it) },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (ep.animationDirectors.isNotEmpty()) {
+                Text(
+                    text = (if (isEn) "Animation Director: " else "作画監督: ") + ep.animationDirectors.joinToString(if (isEn) ", " else "、") { disp(it) },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (expanded) {
+                val groups = listOf(
+                    (if (isEn) "Storyboard / Ep. Director" else "絵コンテ・演出") to ep.unitDirectors,
+                    (if (isEn) "Animation Director" else "作画監督") to ep.animationDirectors,
+                    (if (isEn) "Key Animation" else "原画") to ep.keyAnimators,
+                    (if (isEn) "2nd Key Animation" else "第二原画") to ep.secondKeyAnimators
+                ).filter { it.second.isNotEmpty() }
+                groups.forEach { (label, names) ->
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMediumEmphasized,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        names.distinct().forEach { n ->
+                            Surface(
+                                onClick = { onStaffClick(n) },
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ) {
+                                Text(
+                                    text = disp(n),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

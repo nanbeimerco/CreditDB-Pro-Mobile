@@ -1,0 +1,67 @@
+name: AniList Credits Backfill
+
+# AniList の話数付きクレジットの初回一括取得。1回あたり約5時間半で、途中結果を
+# Release "anilist-credits" の anilist_credits.zip に保存し、次回は続きから再開する。
+# 全作品の取得が終われば、以後の実行はすぐ終わる（週次更新が新作の分を取得する）。
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # 毎日 12:00 UTC（日本時間 21:00）。月曜 00:00 の週次更新とは重ならない
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: '取得に使う時間（分）'
+        default: '330'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: creditdb-data
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download current database and credit store
+        run: |
+          mkdir -p work out
+          TAG=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=50" \
+            --jq '[.[] | select(.draft == false) | select(any(.assets[]; .name == "creditdb.zip"))][0].tag_name')
+          gh release download "$TAG" --pattern creditdb.zip --dir work
+          if gh release view anilist-credits >/dev/null 2>&1; then
+            gh release download anilist-credits --pattern anilist_credits.zip --dir work || true
+          fi
+          ls -la work
+
+      - name: Run backfill
+        id: run
+        run: |
+          STORE=""
+          if [ -f work/anilist_credits.zip ]; then STORE="--store work/anilist_credits.zip"; fi
+          python tools/anilist_backfill.py --creditdb work/creditdb.zip $STORE \
+            --out out/anilist_credits.zip --minutes "${{ inputs.minutes || '330' }}" | tee backfill.log
+          echo "remaining=$(grep -oE 'REMAINING=[0-9]+' backfill.log | tail -1 | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload credit store
+        if: always() && hashFiles('out/anilist_credits.zip') != ''
+        run: |
+          if ! gh release view anilist-credits >/dev/null 2>&1; then
+            gh release create anilist-credits --title "AniList credits store" \
+              --notes "AniList の話数付きクレジットの保存先（ツール用。アプリは使わない）" \
+              --prerelease --latest=false
+          fi
+          gh release upload anilist-credits out/anilist_credits.zip --clobber
+          echo "残り: ${{ steps.run.outputs.remaining }} 作品" >> "$GITHUB_STEP_SUMMARY"
