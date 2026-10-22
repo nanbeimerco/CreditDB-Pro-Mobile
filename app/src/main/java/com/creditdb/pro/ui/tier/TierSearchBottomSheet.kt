@@ -1,6 +1,8 @@
 package com.creditdb.pro.ui.tier
 
 import androidx.compose.foundation.BorderStroke
+import com.creditdb.pro.ui.theme.accent
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -148,7 +150,7 @@ fun TierSearchBottomSheet(
                         .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    AppLoadingIndicator(size = 40.dp)
                 }
             } else if (query.isNotBlank() && searchResults.isEmpty()) {
                 Box(
@@ -252,15 +254,15 @@ private fun SearchResultCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Surface(
-                            color = tierColorSpec.onContainerColor.copy(alpha = 0.15f),
+                            color = tierColorSpec.accent.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, tierColorSpec.onContainerColor.copy(alpha = 0.5f))
+                            border = BorderStroke(1.dp, tierColorSpec.accent.copy(alpha = 0.5f))
                         ) {
                             Text(
                                 text = "偏差値 ${String.format(Locale.US, "%.1f", work.deviationScore)}",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = tierColorSpec.onContainerColor,
+                                    color = tierColorSpec.accent,
                                     fontSize = 10.sp
                                 ),
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)

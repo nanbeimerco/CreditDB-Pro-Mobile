@@ -92,7 +92,7 @@ fun TierScreen(
                 Column {
                     Text(
                         text = if (isEn) "Tier List" else "Tier表",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Row(
@@ -118,55 +118,6 @@ fun TierScreen(
                     }
                 }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { viewModel.openStaffAffinitySheet() },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = if (isEn) "Staff Affinity" else "スタッフ集計",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.openCorrelationSheet() },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = if (isEn) "Taste Correlation" else "数理相関診断",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.openCustomizationDialog() },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = if (isEn) "Customize Tiers" else "Tier設定",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.openExportDialog() },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = if (isEn) "Export" else "エクスポート",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
             }
 
             // 3. Tier表 メインリスト (有限7行をColumn+verticalScrollで常時滑らかスクロール)
@@ -199,7 +150,40 @@ fun TierScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                // Floating toolbar に隠れないよう余白を確保
+                Spacer(modifier = Modifier.height(96.dp))
+            }
+        }
+
+        // M3 Expressive: 操作をまとめた Floating toolbar + 作品追加 FAB
+        HorizontalFloatingToolbar(
+            expanded = true,
+            floatingActionButton = {
+                FloatingToolbarDefaults.VibrantFloatingActionButton(
+                    onClick = { viewModel.openSearchSheet() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = if (isEn) "Add anime" else "作品を追加"
+                    )
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp),
+            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors()
+        ) {
+            IconButton(onClick = { viewModel.openStaffAffinitySheet() }) {
+                Icon(Icons.Default.EmojiEvents, contentDescription = if (isEn) "Staff Affinity" else "スタッフ集計")
+            }
+            IconButton(onClick = { viewModel.openCorrelationSheet() }) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = if (isEn) "Taste Correlation" else "数理相関診断")
+            }
+            IconButton(onClick = { viewModel.openCustomizationDialog() }) {
+                Icon(Icons.Default.Tune, contentDescription = if (isEn) "Customize Tiers" else "Tier設定")
+            }
+            IconButton(onClick = { viewModel.openExportDialog() }) {
+                Icon(Icons.Default.Share, contentDescription = if (isEn) "Export" else "エクスポート")
             }
         }
 
@@ -207,7 +191,7 @@ fun TierScreen(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp)
+                .padding(bottom = 96.dp)
         )
     }
 

@@ -1,6 +1,9 @@
 package com.creditdb.pro.ui.works
 
 import androidx.compose.foundation.background
+import com.creditdb.pro.ui.theme.badgeFill
+import com.creditdb.pro.ui.theme.accent
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -96,7 +99,7 @@ fun WorksScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    AppLoadingIndicator(contained = true, size = 56.dp)
                 }
             } else if (uiState.works.isEmpty()) {
                 Box(
@@ -134,11 +137,7 @@ fun WorksScreen(
                                     .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                AppLoadingIndicator(size = 32.dp)
                             }
                         }
                     }
@@ -177,14 +176,10 @@ fun CompactWorkCard(
     val tierSpec = TierTheme.forTier(work.tier)
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Row(
             modifier = Modifier
@@ -197,19 +192,31 @@ fun CompactWorkCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(58.dp)
             ) {
+                // Tier ごとの形状バッジ（M3 Expressive）
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(com.creditdb.pro.ui.components.tierShape(work.tier))
+                        .background(tierSpec.badgeFill),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = work.tier,
+                        style = MaterialTheme.typography.labelLargeEmphasized,
+                        color = com.creditdb.pro.ui.theme.TierBadgeTextColor
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = String.format("%.1f", work.deviationScore),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = tierSpec.onContainerColor
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = tierSpec.accent
                 )
                 Text(
                     text = "#${work.deviationRank}",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                TierBadge(tier = work.tier, prefix = "")
             }
 
             Spacer(modifier = Modifier.width(12.dp))

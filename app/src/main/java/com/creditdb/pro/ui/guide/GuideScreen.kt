@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.guide
 
 import androidx.compose.foundation.background
+import com.creditdb.pro.ui.theme.accent
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -864,7 +865,7 @@ private fun TierStandardRow(
                     text = standard,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = TierTheme.forTier(tier).onContainerColor
+                    color = TierTheme.forTier(tier).accent
                 )
                 Text(
                     text = desc,

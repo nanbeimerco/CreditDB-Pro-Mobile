@@ -142,20 +142,19 @@ fun MainApp() {
                         ) {
                             Text(
                                 text = "CreditDB",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                style = MaterialTheme.typography.titleLargeEmphasized,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.primary
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
                             ) {
                                 Text(
                                     text = "PRO",
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                         }
@@ -221,15 +220,14 @@ fun MainApp() {
                 enter = slideInVertically { it },
                 exit = slideOutVertically { it }
             ) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 2.dp
+                ShortNavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
                     Screen.bottomNavItems.forEach { screen ->
                         val selected = currentRoute == screen.route
                         val labelText = screen.getLocalizedTitle(isEn)
-                        NavigationBarItem(
+                        ShortNavigationBarItem(
                             selected = selected,
                             onClick = {
                                 if (currentRoute != screen.route) {
@@ -251,13 +249,14 @@ fun MainApp() {
                             label = {
                                 Text(
                                     text = labelText,
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = if (selected) MaterialTheme.typography.labelMediumEmphasized else MaterialTheme.typography.labelMedium,
+                                    maxLines = 1
                                 )
                             },
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            colors = ShortNavigationBarItemDefaults.colors(
+                                selectedIndicatorColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                selectedTextColor = MaterialTheme.colorScheme.primary
+                                selectedTextColorTopIconPosition = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }

@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.tier
 
 import androidx.compose.animation.core.Spring
+import com.creditdb.pro.ui.theme.accent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -121,7 +122,7 @@ fun TierAnimeCard(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = tierColorSpec.onContainerColor
+                        color = tierColorSpec.accent
                     ),
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
@@ -186,15 +187,15 @@ private fun AnimeCardFallback(
             verticalArrangement = Arrangement.Center
         ) {
             Surface(
-                color = tierColorSpec.onContainerColor.copy(alpha = 0.2f),
+                color = tierColorSpec.accent.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(4.dp),
-                border = BorderStroke(1.dp, tierColorSpec.onContainerColor.copy(alpha = 0.6f))
+                border = BorderStroke(1.dp, tierColorSpec.accent.copy(alpha = 0.6f))
             ) {
                 Text(
                     text = tier,
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = tierColorSpec.onContainerColor,
+                        color = tierColorSpec.accent,
                         fontSize = 11.sp
                     ),
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)

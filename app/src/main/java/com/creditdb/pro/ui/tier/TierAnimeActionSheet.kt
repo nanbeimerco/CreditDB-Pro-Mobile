@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.tier
 
 import androidx.compose.foundation.BorderStroke
+import com.creditdb.pro.ui.theme.accent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -84,15 +85,15 @@ fun TierAnimeActionSheet(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
-                            color = tierColorSpec.onContainerColor.copy(alpha = 0.15f),
+                            color = tierColorSpec.accent.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(4.dp),
-                            border = BorderStroke(1.dp, tierColorSpec.onContainerColor.copy(alpha = 0.5f))
+                            border = BorderStroke(1.dp, tierColorSpec.accent.copy(alpha = 0.5f))
                         ) {
                             Text(
                                 text = "偏差値 ${String.format(Locale.US, "%.1f", anime.deviationScore)}",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = tierColorSpec.onContainerColor
+                                    color = tierColorSpec.accent
                                 ),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )

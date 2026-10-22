@@ -22,7 +22,9 @@ val AppFontFamily: FontFamily = FontFamily(
     Font(R.font.montserrat_extrabold, FontWeight.ExtraBold)
 )
 
-val Typography = Typography(
+private fun TextStyle.emphasized(weight: FontWeight) = copy(fontWeight = weight)
+
+private val BaseTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = AppFontFamily,
         fontWeight = FontWeight.Bold,
@@ -129,3 +131,32 @@ val Typography = Typography(
         letterSpacing = 0.25.sp
     )
 )
+
+/**
+ * Material 3 Expressive: 各スタイルに強調 (Emphasized) 版を追加。
+ * 見出し・数値・選択中の項目など、目立たせたい箇所で *Emphasized を使う。
+ */
+val Typography = BaseTypography.run {
+    Typography(
+        displayLarge = displayLarge, displayMedium = displayMedium, displaySmall = displaySmall,
+        headlineLarge = headlineLarge, headlineMedium = headlineMedium, headlineSmall = headlineSmall,
+        titleLarge = titleLarge, titleMedium = titleMedium, titleSmall = titleSmall,
+        bodyLarge = bodyLarge, bodyMedium = bodyMedium, bodySmall = bodySmall,
+        labelLarge = labelLarge, labelMedium = labelMedium, labelSmall = labelSmall,
+        displayLargeEmphasized = displayLarge.emphasized(FontWeight.ExtraBold),
+        displayMediumEmphasized = displayMedium.emphasized(FontWeight.ExtraBold),
+        displaySmallEmphasized = displaySmall.emphasized(FontWeight.ExtraBold),
+        headlineLargeEmphasized = headlineLarge.emphasized(FontWeight.ExtraBold),
+        headlineMediumEmphasized = headlineMedium.emphasized(FontWeight.ExtraBold),
+        headlineSmallEmphasized = headlineSmall.emphasized(FontWeight.ExtraBold),
+        titleLargeEmphasized = titleLarge.emphasized(FontWeight.ExtraBold),
+        titleMediumEmphasized = titleMedium.emphasized(FontWeight.Bold),
+        titleSmallEmphasized = titleSmall.emphasized(FontWeight.Bold),
+        bodyLargeEmphasized = bodyLarge.emphasized(FontWeight.SemiBold),
+        bodyMediumEmphasized = bodyMedium.emphasized(FontWeight.SemiBold),
+        bodySmallEmphasized = bodySmall.emphasized(FontWeight.SemiBold),
+        labelLargeEmphasized = labelLarge.emphasized(FontWeight.Bold),
+        labelMediumEmphasized = labelMedium.emphasized(FontWeight.Bold),
+        labelSmallEmphasized = labelSmall.emphasized(FontWeight.Bold),
+    )
+}

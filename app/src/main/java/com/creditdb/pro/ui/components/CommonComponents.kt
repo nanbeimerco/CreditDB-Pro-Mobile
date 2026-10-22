@@ -48,15 +48,15 @@ fun TierBadge(
     val spec = TierTheme.forTier(tier)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 2.dp),
+            .clip(CircleShape)
+            .background(spec.containerColor.copy(alpha = 0.22f))
+            .border(1.dp, spec.borderColor.copy(alpha = 0.5f), CircleShape)
+            .padding(horizontal = 10.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = "$prefix$tier",
-            color = spec.onContainerColor,
+            color = spec.accent,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold
         )
@@ -72,19 +72,18 @@ fun LargeTierBadge(
     modifier: Modifier = Modifier
 ) {
     val spec = TierTheme.forTier(tier)
+    // M3 Expressive: Tier ごとに形を変える（上位ほど華やかな形）
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f))
-            .border(1.2.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .size(64.dp)
+            .clip(tierShape(tier))
+            .background(spec.badgeFill),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = tier,
-            color = spec.onContainerColor,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold
+            color = TierBadgeTextColor,
+            style = MaterialTheme.typography.headlineSmallEmphasized
         )
     }
 }
@@ -103,16 +102,15 @@ fun DualTierBadge(
 
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .padding(horizontal = 10.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = ratingTier,
-            color = rSpec.onContainerColor,
+            color = rSpec.accent,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold
         )
@@ -124,7 +122,7 @@ fun DualTierBadge(
         )
         Text(
             text = cumulativeTier,
-            color = cSpec.onContainerColor,
+            color = cSpec.accent,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold
         )
@@ -162,9 +160,9 @@ fun VerdictBadge(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(CircleShape)
             .background(bg)
-            .border(0.8.dp, border, RoundedCornerShape(4.dp))
+            .border(0.8.dp, border, CircleShape)
             .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -189,17 +187,16 @@ fun RoleBadge(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-            .border(0.8.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f))
             .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = displayName,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -217,9 +214,8 @@ fun MetricCard(
 ) {
     Surface(
         modifier = modifier.defaultMinSize(minHeight = 80.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 1.dp
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Column(
             modifier = Modifier
@@ -238,8 +234,7 @@ fun MetricCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 color = valueColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -282,9 +277,8 @@ fun SmartSearchBar(
             modifier = Modifier
                 .weight(1f)
                 .height(46.dp),
-            shape = RoundedCornerShape(23.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Row(
                 modifier = Modifier
@@ -353,7 +347,8 @@ fun SmartSearchBar(
         ) {
             FilledTonalIconButton(
                 onClick = onFilterClick,
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(46.dp),
+                shapes = IconButtonDefaults.shapes(),
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
                     containerColor = if (hasActiveFilters) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -447,18 +442,12 @@ fun WorkFilterBottomSheet(
                 )
             }
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                availableSorts.forEach { opt ->
-                    FilterChip(
-                        selected = sortOption == opt,
-                        onClick = { onSortChange(opt) },
-                        label = { Text(opt.getDisplayName(isEn)) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = availableSorts,
+                selected = sortOption,
+                onSelect = { onSortChange(it) },
+                label = { it.getDisplayName(isEn) }
+            )
 
             // 2. 総合判定 (Compare / Pro の独自機能)
             Text(
@@ -482,18 +471,12 @@ fun WorkFilterBottomSheet(
                     "概ねスタッフ前評判通り" to "● 前評判通り"
                 )
             }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                verdicts.forEach { (key, label) ->
-                    FilterChip(
-                        selected = verdictFilter == key,
-                        onClick = { onVerdictChange(key) },
-                        label = { Text(label) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = verdicts.map { it.first },
+                selected = verdictFilter,
+                onSelect = { onVerdictChange(it) },
+                label = { k -> verdicts.first { it.first == k }.second }
+            )
 
             // 3. Tier
             Text(
@@ -503,18 +486,12 @@ fun WorkFilterBottomSheet(
                 fontWeight = FontWeight.Bold
             )
             val tiers = listOf("all", "S+", "S", "A+", "A", "B+", "B", "C", "D")
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                tiers.forEach { t ->
-                    FilterChip(
-                        selected = tierFilter == t,
-                        onClick = { onTierChange(t) },
-                        label = { Text(if (t == "all") (if (isEn) "All Tiers" else "全Tier") else t) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = tiers,
+                selected = tierFilter,
+                onSelect = { onTierChange(it) },
+                label = { if (it == "all") (if (isEn) "All Tiers" else "全Tier") else it }
+            )
 
             // 4. 年代
             Text(
@@ -542,24 +519,18 @@ fun WorkFilterBottomSheet(
                     "1980s" to "1980年代以前"
                 )
             }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                eras.forEach { (key, label) ->
-                    FilterChip(
-                        selected = eraFilter == key,
-                        onClick = { onEraChange(key) },
-                        label = { Text(label) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = eras.map { it.first },
+                selected = eraFilter,
+                onSelect = { onEraChange(it) },
+                label = { k -> eras.first { it.first == k }.second }
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text(if (isEn) "Apply & Close" else "適用して閉じる", fontWeight = FontWeight.Bold)
             }
@@ -627,18 +598,12 @@ fun StaffFilterBottomSheet(
                 StaffSortOption.WORKS_COUNT
             )
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                availableSorts.forEach { opt ->
-                    FilterChip(
-                        selected = sortOption == opt,
-                        onClick = { onSortChange(opt) },
-                        label = { Text(opt.getDisplayName(isEn)) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = availableSorts,
+                selected = sortOption,
+                onSelect = { onSortChange(it) },
+                label = { it.getDisplayName(isEn) }
+            )
 
             // 2. もう片方の指標のTier指定 (総合実力順のときは生涯累計実績Tier、生涯累計実績順のときは総合実力Tier)
             val crossTierTitle = if (sortOption == StaffSortOption.CUMULATIVE) {
@@ -653,18 +618,12 @@ fun StaffFilterBottomSheet(
                 fontWeight = FontWeight.Bold
             )
             val tiers = listOf("all", "S+", "S", "A+", "A", "B+", "B", "C", "D")
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                tiers.forEach { t ->
-                    FilterChip(
-                        selected = crossTierFilter == t,
-                        onClick = { onCrossTierChange(t) },
-                        label = { Text(if (t == "all") (if (isEn) "All Tiers" else "全Tier") else t) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = tiers,
+                selected = crossTierFilter,
+                onSelect = { onCrossTierChange(it) },
+                label = { if (it == "all") (if (isEn) "All Tiers" else "全Tier") else it }
+            )
 
             // 3. 初参加年代
             Text(
@@ -681,24 +640,18 @@ fun StaffFilterBottomSheet(
                 DebutEraFilter.ERA_2000S,
                 DebutEraFilter.PRE_2000
             )
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                availableEras.forEach { era ->
-                    FilterChip(
-                        selected = debutEra == era,
-                        onClick = { onDebutEraChange(era) },
-                        label = { Text(era.getDisplayName(isEn)) }
-                    )
-                }
-            }
+            SingleChoiceButtonGroup(
+                options = availableEras,
+                selected = debutEra,
+                onSelect = { onDebutEraChange(it) },
+                label = { it.getDisplayName(isEn) }
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {
                 Text(if (isEn) "Apply & Close" else "適用して閉じる", fontWeight = FontWeight.Bold)
             }
@@ -749,14 +702,16 @@ fun DatabaseUpdateDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                LinearProgressIndicator(
+                if (isUpdating) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        AppLoadingIndicator(contained = true, size = 64.dp)
+                    }
+                }
+                LinearWavyProgressIndicator(
                     progress = { percent / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                    modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -788,7 +743,7 @@ fun DatabaseUpdateDialog(
         },
         confirmButton = {
             if (!isUpdating) {
-                Button(onClick = onDismiss) {
+                Button(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                     Text(if (isEn) "Close" else "閉じる")
                 }
             }

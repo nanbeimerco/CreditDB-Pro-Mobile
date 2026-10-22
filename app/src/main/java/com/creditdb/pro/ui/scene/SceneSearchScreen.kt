@@ -1,6 +1,7 @@
 package com.creditdb.pro.ui.scene
 
 import android.content.ClipboardManager
+import com.creditdb.pro.ui.components.AppLoadingIndicator
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -318,11 +319,7 @@ fun SceneSearchScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            strokeWidth = 4.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        AppLoadingIndicator(contained = true, size = 64.dp)
                         Text(
                             text = AppStrings.sceneSearching(isEn),
                             style = MaterialTheme.typography.titleMedium,
