@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,11 +22,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.creditdb.pro.ui.glass.DEFAULT_GLASS_CLARITY
+import com.creditdb.pro.ui.glass.DEFAULT_GLASS_SHADE
+import com.creditdb.pro.ui.glass.GlassRenderStyle
 import com.creditdb.pro.ui.glass.GlassSettings
 import com.creditdb.pro.ui.glass.isGlassSupported
 import com.creditdb.pro.ui.theme.ColorPresetSpec
 import com.creditdb.pro.ui.theme.ColorPresets
 import com.creditdb.pro.ui.theme.ThemeManager
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +43,11 @@ fun ThemePaletteBottomSheet(
     val currentLang = com.creditdb.pro.ui.theme.LanguageManager.currentLanguage
     val liquidGlassEnabled by GlassSettings.liquidGlass.collectAsState()
     val reduceDynamicBlur by GlassSettings.reduceDynamicBlur.collectAsState()
+    val glassRenderStyle by GlassSettings.glassRenderStyle.collectAsState()
+    val glassClarity by GlassSettings.glassClarity.collectAsState()
+    val glassShade by GlassSettings.glassShade.collectAsState()
+    val liquidGlassBlurDp by GlassSettings.liquidGlassBlurDp.collectAsState()
+    val liquidGlassOpacity by GlassSettings.liquidGlassOpacity.collectAsState()
     val glassSupported = isGlassSupported()
 
     com.creditdb.pro.ui.glass.GlassModalBottomSheet(
@@ -160,6 +170,242 @@ fun ThemePaletteBottomSheet(
                     checked = reduceDynamicBlur,
                     onCheckedChange = { GlassSettings.setReduceDynamicBlur(it) }
                 )
+            }
+
+            // ガラスのレンダリング方式（フロスト / クリア）および詳細調整スライダー
+            if (liquidGlassEnabled && glassSupported && !reduceDynamicBlur) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = if (isEn) "Glass Rendering" else "ガラスのレンダリング方式",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (isEn) {
+                                "Frosted: soft, milky glass. Clear: clear glass that bends light only at its edge."
+                            } else {
+                                "フロスト: やわらかい乳白のガラス。クリア: 澄んだガラスで、縁だけが光を曲げます。"
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    SingleChoiceButtonGroup(
+                        options = GlassRenderStyle.entries,
+                        selected = glassRenderStyle,
+                        onSelect = { GlassSettings.setGlassRenderStyle(it) },
+                        label = { style ->
+                            when (style) {
+                                GlassRenderStyle.FROSTED -> if (isEn) "Frosted" else "フロスト"
+                                GlassRenderStyle.CLEAR -> if (isEn) "Clear" else "クリア"
+                            }
+                        },
+                        scrollable = false
+                    )
+
+                    if (glassRenderStyle == GlassRenderStyle.CLEAR) {
+                        // クリアさ (Clarity)
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isEn) "Clarity" else "クリアさ",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (isEn) {
+                                            "How clear the glass is. Lower adds tint and blur."
+                                        } else {
+                                            "ガラスの透明度。下げるほど色の膜とぼかしが強くなります。"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "${(glassClarity * 100).roundToInt()}%",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (glassClarity != DEFAULT_GLASS_CLARITY) {
+                                        IconButton(
+                                            onClick = { GlassSettings.setGlassClarity(DEFAULT_GLASS_CLARITY) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = if (isEn) "Reset" else "リセット",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Slider(
+                                value = glassClarity,
+                                onValueChange = { GlassSettings.setGlassClarity(it) },
+                                valueRange = 0f..1f,
+                                steps = 19
+                            )
+                        }
+
+                        // ガラスの暗さ (Darkness / Shade)
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isEn) "Darkness" else "ガラスの暗さ",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (isEn) {
+                                            "How dark the clear glass is. 100% is the darkest."
+                                        } else {
+                                            "クリアなガラスの暗さ。100% が最も暗くなります。"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "${(glassShade * 100).roundToInt()}%",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (glassShade != DEFAULT_GLASS_SHADE) {
+                                        IconButton(
+                                            onClick = { GlassSettings.setGlassShade(DEFAULT_GLASS_SHADE) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = if (isEn) "Reset" else "リセット",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Slider(
+                                value = glassShade,
+                                onValueChange = { GlassSettings.setGlassShade(it) },
+                                valueRange = 0f..1f,
+                                steps = 19
+                            )
+                        }
+                    } else {
+                        // フロスト時: ぼかし (Blur) & 不透明度 (Opacity)
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isEn) "Blur Strength" else "ぼかしの強さ",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "${liquidGlassBlurDp.roundToInt()} dp",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (liquidGlassBlurDp != GlassSettings.DEFAULT_LIQUID_GLASS_BLUR_DP) {
+                                        IconButton(
+                                            onClick = { GlassSettings.setLiquidGlassBlurDp(GlassSettings.DEFAULT_LIQUID_GLASS_BLUR_DP) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = if (isEn) "Reset" else "リセット",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Slider(
+                                value = liquidGlassBlurDp,
+                                onValueChange = { GlassSettings.setLiquidGlassBlurDp(it) },
+                                valueRange = GlassSettings.MIN_LIQUID_GLASS_BLUR_DP..GlassSettings.MAX_LIQUID_GLASS_BLUR_DP,
+                                steps = 23
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isEn) "Surface Opacity" else "不透明度",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "${(liquidGlassOpacity * 100).roundToInt()}%",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (liquidGlassOpacity != GlassSettings.DEFAULT_LIQUID_GLASS_OPACITY) {
+                                        IconButton(
+                                            onClick = { GlassSettings.setLiquidGlassOpacity(GlassSettings.DEFAULT_LIQUID_GLASS_OPACITY) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Refresh,
+                                                contentDescription = if (isEn) "Reset" else "リセット",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Slider(
+                                value = liquidGlassOpacity,
+                                onValueChange = { GlassSettings.setLiquidGlassOpacity(it) },
+                                valueRange = GlassSettings.MIN_LIQUID_GLASS_OPACITY..GlassSettings.MAX_LIQUID_GLASS_OPACITY,
+                                steps = 14
+                            )
+                        }
+                    }
+                }
             }
 
             HorizontalDivider(
