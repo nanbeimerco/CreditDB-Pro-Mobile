@@ -2,6 +2,7 @@ package com.creditdb.pro.ui.glass
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -69,6 +70,10 @@ class TopBarController {
     var content by mutableStateOf<(@Composable () -> Unit)?>(null)
         private set
 
+    private var activeOverlayOwner: Any? = null
+    var floatingOverlay by mutableStateOf<(@Composable BoxScope.() -> Unit)?>(null)
+        private set
+
     fun set(owner: Any, composable: @Composable () -> Unit) {
         activeOwner = owner
         content = composable
@@ -78,6 +83,18 @@ class TopBarController {
         if (activeOwner === owner) {
             activeOwner = null
             content = null
+        }
+    }
+
+    fun setOverlay(owner: Any, composable: @Composable BoxScope.() -> Unit) {
+        activeOverlayOwner = owner
+        floatingOverlay = composable
+    }
+
+    fun clearOverlay(owner: Any) {
+        if (activeOverlayOwner === owner) {
+            activeOverlayOwner = null
+            floatingOverlay = null
         }
     }
 }
@@ -103,6 +120,25 @@ fun ProvideTopBar(content: @Composable () -> Unit) {
         controller.set(owner) { currentContent() }
         onDispose {
             controller.clear(owner)
+        }
+    }
+}
+
+/**
+ * 各画面から appBackdrop の外側（GlassTabBar の直上など）に配置する
+ * Liquid Glass フローティングオーバーレイ（Tier ツールバー・FAB・Snackbar 等）を提供する Composable。
+ * appBackdrop の記録対象外に描画されるため、RenderNode の再帰参照（SIGSEGV）を防ぎつつ
+ * リアルタイム屈折（Modifier.liquidGlass）を安全に適用できる。
+ */
+@Composable
+fun ProvideFloatingOverlay(content: @Composable BoxScope.() -> Unit) {
+    val controller = LocalTopBarController.current
+    val owner = remember { Any() }
+    val currentContent by rememberUpdatedState(content)
+    DisposableEffect(controller, owner) {
+        controller.setOverlay(owner) { currentContent() }
+        onDispose {
+            controller.clearOverlay(owner)
         }
     }
 }

@@ -176,7 +176,11 @@ fun TierScreen(
             // 下部 GlassTabBar + Tier ガラスツールバーに隠れないよう余白を確保
             Spacer(modifier = Modifier.height(chromePadding.calculateBottomPadding() + 68.dp))
         }
+    }
 
+    // 下部フローティングツールバー + 丸い「+」ボタン + SnackbarHost を
+    // appBackdrop の外側レイヤー（ProvideFloatingOverlay）へ提供する
+    com.creditdb.pro.ui.glass.ProvideFloatingOverlay {
         // Liquid Glass フローティングツールバー（4アイコンカプセル）+ 丸いガラス作品追加ボタン（+）
         // GlassTabBar の直上に配置し、GlassTabBar のインライン縮小に連動して上下する
         Row(

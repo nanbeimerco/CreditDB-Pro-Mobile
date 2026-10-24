@@ -358,6 +358,7 @@ fun MainApp() {
                         .hazeSource(hazeState)
                         .nestedScroll(tabBarScrollConnection),
                 ) {
+                    CompositionLocalProvider(com.creditdb.pro.ui.glass.LocalInsideAppBackdrop provides true) {
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Works.route,
@@ -477,6 +478,7 @@ fun MainApp() {
                             )
                         }
                     }
+                    }
                 }
 
                 // 2. 上部フェードブラー
@@ -516,6 +518,10 @@ fun MainApp() {
                         }
                     }
                 }
+
+                // 4b. 画面固有の下部フローティングオーバーレイ（Tier ツールバー・FAB・Snackbar 等）
+                // appBackdrop の外側に配置することで、RenderNode の再帰参照を起こさずリアルタイム屈折を描画する
+                topBarController.floatingOverlay?.invoke(this)
 
                 // 5. 下部フローティング GlassTabBar（4タブ）
                 androidx.compose.animation.AnimatedVisibility(

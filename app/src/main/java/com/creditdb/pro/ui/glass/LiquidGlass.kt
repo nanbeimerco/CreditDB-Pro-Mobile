@@ -56,6 +56,13 @@ val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdrop provided") }
 
 /**
+ * True inside the Box that records [LocalAppBackdrop]. Any [liquidGlass] modifier composed
+ * inside that subtree must fall back to [lightweightLiquidGlass] instead of drawing
+ * [LocalAppBackdrop] into itself, which would create a cyclic RenderNode tree in HWUI.
+ */
+val LocalInsideAppBackdrop = compositionLocalOf { false }
+
+/**
  * Where a [liquidGlass] surface composed under it also records the glass it
  * draws — the sampled, blurred and tinted backdrop, without its rim or shadow —
  * so a lens above it can refract that surface rather than the page behind it.
@@ -165,6 +172,12 @@ fun Modifier.liquidGlass(
     role: GlassRole = if (surfaceAlpha != null) GlassRole.Overlay else GlassRole.Control,
 ): Modifier {
     if (!isGlassSupported()) return this
+    if (LocalInsideAppBackdrop.current) {
+        return lightweightLiquidGlass(
+            shape = shape,
+            fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        )
+    }
     val reduceDynamicBlur by GlassSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     if (reduceDynamicBlur) {
         return background(MaterialTheme.colorScheme.surface, shape)
