@@ -8,7 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.creditdb.pro.ui.glass.GlassRole
+import com.creditdb.pro.ui.glass.lightweightLiquidGlass
+import com.creditdb.pro.ui.glass.liquidGlass
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -67,27 +71,54 @@ fun TierScreen(
         com.creditdb.pro.data.tier.TierAnalysisEngine.calculateTasteCorrelation(uiState.config)
     }
 
+    // 上部1行フローティングバー: [Tier表 カプセル] ... [⋮]
+    com.creditdb.pro.ui.glass.ProvideTopBar {
+        com.creditdb.pro.ui.glass.FloatingTopBarRow {
+            com.creditdb.pro.ui.glass.TopBarTitleCapsule(
+                title = if (isEn) "Tier List" else "Tier表"
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            com.creditdb.pro.ui.glass.LocalOverflowMenuButton.current()
+        }
+    }
+
+    val chromePadding = com.creditdb.pro.ui.glass.LocalChromePadding.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val measuredTabBarHeightPx = com.creditdb.pro.ui.glass.LocalFloatingBarsHeightPx.current
+    val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val tabBarBottomOffset = if (measuredTabBarHeightPx > 0) {
+        with(density) { measuredTabBarHeightPx.toDp() }
+    } else {
+        navBarBottom + 84.dp
+    }
+    val glassEnabled = com.creditdb.pro.ui.glass.LocalLiquidGlassEnabled.current && com.creditdb.pro.ui.glass.isGlassSupported()
+    val glassIconTint = if (glassEnabled) com.creditdb.pro.ui.glass.glassContentColor() else MaterialTheme.colorScheme.onSurface
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        val rhoStr = if (correlation.sampleSize >= 3) {
+            String.format(java.util.Locale.US, "%+.2f", correlation.spearmanRho)
+        } else {
+            "--"
+        }
+
+        // Tier表 メインリスト (見出し + 有限行を一体スクロール)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 1. トップバー (Title + Subtitle + 4つの機能アイコン: 分析, 診断, 行編集, エクスポート)
-            val rhoStr = if (correlation.sampleSize >= 3) {
-                String.format(java.util.Locale.US, "%+.2f", correlation.spearmanRho)
-            } else {
-                "--"
-            }
+            Spacer(modifier = Modifier.height(chromePadding.calculateTopPadding() + 2.dp))
 
+            // 先頭アイテム: 見出し（件数・相関係数 ρ）
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -119,82 +150,148 @@ fun TierScreen(
                         )
                     }
                 }
-
             }
 
-            // 3. Tier表 メインリスト (有限7行をColumn+verticalScrollで常時滑らかスクロール)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Spacer(modifier = Modifier.height(4.dp))
-                uiState.config.rows.forEach { row ->
-                    key(row.id) {
-                        TierRowComponent(
-                            row = row,
-                            isExpanded = uiState.expandedRowIds.contains(row.id),
-                            onToggleExpand = { viewModel.toggleRowExpand(row.id) },
-                            onAnimeClick = { anime ->
-                                onNavigateToWork(anime.id)
-                            },
-                            onAnimeLongClick = { anime, r ->
-                                viewModel.openAnimeActionSheet(anime, r)
-                            },
-                            onAddAnimeClick = { r ->
-                                viewModel.openSearchSheet(targetRowId = r.id)
-                            },
-                            onEditRowClick = {
-                                viewModel.openCustomizationDialog()
-                            }
-                        )
-                    }
-                }
-                // Floating toolbar に隠れないよう余白を確保
-                Spacer(modifier = Modifier.height(96.dp))
-            }
-        }
-
-        // M3 Expressive: 操作をまとめた Floating toolbar + 作品追加 FAB
-        HorizontalFloatingToolbar(
-            expanded = true,
-            floatingActionButton = {
-                FloatingToolbarDefaults.VibrantFloatingActionButton(
-                    onClick = { viewModel.openSearchSheet() }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = if (isEn) "Add anime" else "作品を追加"
+            uiState.config.rows.forEach { row ->
+                key(row.id) {
+                    TierRowComponent(
+                        row = row,
+                        isExpanded = uiState.expandedRowIds.contains(row.id),
+                        onToggleExpand = { viewModel.toggleRowExpand(row.id) },
+                        onAnimeClick = { anime ->
+                            onNavigateToWork(anime.id)
+                        },
+                        onAnimeLongClick = { anime, r ->
+                            viewModel.openAnimeActionSheet(anime, r)
+                        },
+                        onAddAnimeClick = { r ->
+                            viewModel.openSearchSheet(targetRowId = r.id)
+                        },
+                        onEditRowClick = {
+                            viewModel.openCustomizationDialog()
+                        }
                     )
                 }
-            },
+            }
+            // 下部 GlassTabBar + Tier ガラスツールバーに隠れないよう余白を確保
+            Spacer(modifier = Modifier.height(chromePadding.calculateBottomPadding() + 68.dp))
+        }
+
+        // Liquid Glass フローティングツールバー（4アイコンカプセル）+ 丸いガラス作品追加ボタン（+）
+        // GlassTabBar の直上に配置し、GlassTabBar のインライン縮小に連動して上下する
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
-            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors()
+                .padding(bottom = tabBarBottomOffset + 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { viewModel.openStaffAffinitySheet() }) {
-                Icon(Icons.Default.EmojiEvents, contentDescription = if (isEn) "Staff Affinity" else "スタッフ集計")
+            Row(
+                modifier = Modifier
+                    .height(48.dp)
+                    .then(
+                        if (glassEnabled) {
+                            Modifier.liquidGlass(shape = CircleShape)
+                        } else {
+                            Modifier.lightweightLiquidGlass(
+                                shape = CircleShape,
+                                fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                        }
+                    )
+                    .padding(horizontal = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { viewModel.openStaffAffinitySheet() }) {
+                    Icon(
+                        Icons.Default.EmojiEvents,
+                        contentDescription = if (isEn) "Staff Affinity" else "スタッフ集計",
+                        tint = glassIconTint
+                    )
+                }
+                IconButton(onClick = { viewModel.openCorrelationSheet() }) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = if (isEn) "Taste Correlation" else "数理相関診断",
+                        tint = glassIconTint
+                    )
+                }
+                IconButton(onClick = { viewModel.openCustomizationDialog() }) {
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = if (isEn) "Customize Tiers" else "Tier設定",
+                        tint = glassIconTint
+                    )
+                }
+                IconButton(onClick = { viewModel.openExportDialog() }) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = if (isEn) "Export" else "エクスポート",
+                        tint = glassIconTint
+                    )
+                }
             }
-            IconButton(onClick = { viewModel.openCorrelationSheet() }) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = if (isEn) "Taste Correlation" else "数理相関診断")
-            }
-            IconButton(onClick = { viewModel.openCustomizationDialog() }) {
-                Icon(Icons.Default.Tune, contentDescription = if (isEn) "Customize Tiers" else "Tier設定")
-            }
-            IconButton(onClick = { viewModel.openExportDialog() }) {
-                Icon(Icons.Default.Share, contentDescription = if (isEn) "Export" else "エクスポート")
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .then(
+                        if (glassEnabled) {
+                            Modifier.liquidGlass(shape = CircleShape)
+                        } else {
+                            Modifier.lightweightLiquidGlass(
+                                shape = CircleShape,
+                                fallbackColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        }
+                    )
+                    .clip(CircleShape)
+                    .clickable { viewModel.openSearchSheet() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = if (isEn) "Add anime" else "作品を追加",
+                    tint = if (glassEnabled) glassIconTint else MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
         }
 
+        // Liquid Glass カプセル SnackbarHost（下部タブバー＋Tierツールバーの上にフロート）
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 96.dp)
-        )
+                .padding(bottom = tabBarBottomOffset + 68.dp, start = 16.dp, end = 16.dp)
+        ) { snackbarData ->
+            val capsuleShape = RoundedCornerShape(percent = 50)
+            Box(
+                modifier = Modifier
+                    .then(
+                        if (glassEnabled) {
+                            Modifier.liquidGlass(
+                                shape = capsuleShape,
+                                surfaceAlpha = 0.78f,
+                                role = GlassRole.Overlay
+                            )
+                        } else {
+                            Modifier.lightweightLiquidGlass(
+                                shape = capsuleShape,
+                                fallbackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                            )
+                        }
+                    )
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = snackbarData.visuals.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = glassIconTint
+                )
+            }
+        }
     }
 
     // --- 各種ダイアログ & ボトムシート ---

@@ -254,8 +254,8 @@ fun MetricCard(
 }
 
 /**
- * 1行統合スマート検索バー
- * 検索窓とフィルタボタンを1行に集約し、画面縦領域を最大化
+ * 1行統合スマート検索バー（Liquid Glass フローティング仕様）
+ * 検索カプセル + フィルタ丸ボタン（バッジ付き）+ 右端メニューボタン（⋮）を上部1行に集約
  */
 @Composable
 fun SmartSearchBar(
@@ -264,46 +264,45 @@ fun SmartSearchBar(
     onFilterClick: () -> Unit,
     hasActiveFilters: Boolean = false,
     placeholder: String = if (LanguageManager.isEnglish) AppStrings.searchPlaceholderEn else AppStrings.searchPlaceholder,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailingActions: @Composable () -> Unit = { com.creditdb.pro.ui.glass.LocalOverflowMenuButton.current() },
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Surface(
+    val glassEnabled = com.creditdb.pro.ui.glass.LocalLiquidGlassEnabled.current && com.creditdb.pro.ui.glass.isGlassSupported()
+    val contentColor = if (glassEnabled) com.creditdb.pro.ui.glass.glassContentColor() else MaterialTheme.colorScheme.onSurface
+    val secondaryColor = if (glassEnabled) contentColor.copy(alpha = 0.62f) else MaterialTheme.colorScheme.onSurfaceVariant
+
+    com.creditdb.pro.ui.glass.FloatingTopBarRow(modifier = modifier) {
+        // 1. 検索ガラスカプセル
+        Box(
             modifier = Modifier
                 .weight(1f)
-                .height(46.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                .height(com.creditdb.pro.ui.glass.TopBarGlassButtonSize)
+                .then(com.creditdb.pro.ui.glass.topBarGlass(CircleShape))
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = if (LanguageManager.isEnglish) "Search" else "検索",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    tint = secondaryColor,
+                    modifier = Modifier.size(19.dp),
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.CenterStart
+                    contentAlignment = Alignment.CenterStart,
                 ) {
                     if (query.isEmpty()) {
                         Text(
                             text = placeholder,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            color = secondaryColor,
                             maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     androidx.compose.foundation.text.BasicTextField(
@@ -312,55 +311,48 @@ fun SmartSearchBar(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            fontSize = 13.5.sp,
+                            color = contentColor,
                         ),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
                     )
                 }
                 if (query.isNotEmpty()) {
                     IconButton(
                         onClick = { onQueryChange("") },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(28.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = if (LanguageManager.isEnglish) "Clear" else "クリア",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
+                            tint = secondaryColor,
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
             }
         }
 
-        // フィルタ展開ボタン
-        BadgedBox(
-            badge = {
-                if (hasActiveFilters) {
-                    Badge(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.offset(x = (-4).dp, y = 4.dp)
-                    )
-                }
-            }
-        ) {
-            FilledTonalIconButton(
+        // 2. フィルタ展開ガラス丸ボタン（アクティブ時ドットバッジ付き）
+        Box {
+            com.creditdb.pro.ui.glass.TopBarGlassButton(
                 onClick = onFilterClick,
-                modifier = Modifier.size(46.dp),
-                shapes = IconButtonDefaults.shapes(),
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = if (hasActiveFilters) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FilterList,
-                    contentDescription = if (LanguageManager.isEnglish) "Filters" else "条件絞込",
-                    modifier = Modifier.size(20.dp)
+                icon = Icons.Default.FilterList,
+                contentDescription = if (LanguageManager.isEnglish) "Filters" else "条件絞込",
+            )
+            if (hasActiveFilters) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-2).dp, y = 2.dp)
+                        .size(9.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                 )
             }
         }
+
+        // 3. 右端「⋮」メニューボタン等
+        trailingActions()
     }
 }
 

@@ -55,73 +55,85 @@ fun WorksScreen(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
-    ) {
-        val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
 
-        // 1. スマート1行検索バー
+    // 上部1行フローティング検索バー（検索カプセル + フィルタ丸ボタン + ⋮メニュー）
+    com.creditdb.pro.ui.glass.ProvideTopBar {
         SmartSearchBar(
             query = uiState.searchQuery,
             onQueryChange = viewModel::onSearchQueryChange,
             onFilterClick = { viewModel.setFilterSheetVisible(true) },
             hasActiveFilters = uiState.hasActiveFilters,
-            placeholder = if (isEn) com.creditdb.pro.ui.theme.AppStrings.searchPlaceholderEn else com.creditdb.pro.ui.theme.AppStrings.searchPlaceholder
+            placeholder = if (isEn) com.creditdb.pro.ui.theme.AppStrings.searchPlaceholderEn else com.creditdb.pro.ui.theme.AppStrings.searchPlaceholder,
         )
+    }
 
-        // 2. スリムステータスバー
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            com.creditdb.pro.ui.components.CountLabel(
-                text = if (isEn) "${uiState.totalCount} works" else "${uiState.totalCount} 件の作品",
-                modifier = Modifier.weight(1f)
-            )
-            com.creditdb.pro.ui.components.SortLabelPill(
-                text = uiState.sortOption.getDisplayName(isEn),
-                onClick = { viewModel.setFilterSheetVisible(true) },
-                modifier = Modifier.weight(1f, fill = false)
-            )
-        }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
+                contentAlignment = Alignment.Center
+            ) {
+                AppLoadingIndicator(contained = true, size = 56.dp)
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                    horizontal = 12.dp,
+                    extraTop = 2.dp,
+                    extraBottom = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // 先頭アイテム: 件数 & ソート条件ピル（スクロールで自然に流れる）
+                item(key = "works_status_header") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        com.creditdb.pro.ui.components.CountLabel(
+                            text = if (isEn) "${uiState.totalCount} works" else "${uiState.totalCount} 件の作品",
+                            modifier = Modifier.weight(1f)
+                        )
+                        com.creditdb.pro.ui.components.SortLabelPill(
+                            text = uiState.sortOption.getDisplayName(isEn),
+                            onClick = { viewModel.setFilterSheetVisible(true) },
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                }
 
-        // 3. 作品リスト
-        Box(modifier = Modifier.weight(1f)) {
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AppLoadingIndicator(contained = true, size = 56.dp)
-                }
-            } else if (uiState.works.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isEn) "No matching works found" else "該当する作品が見つかりませんでした",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                if (uiState.works.isEmpty()) {
+                    item(key = "works_empty") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isEn) "No matching works found" else "該当する作品が見つかりませんでした",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
                     itemsIndexed(
                         items = uiState.works,
                         key = { _, item -> item.id }
-                    ) { index, work ->
+                    ) { _, work ->
                         CompactWorkCard(
                             work = work,
                             onClick = { onWorkClick(work.id) }
@@ -129,7 +141,7 @@ fun WorksScreen(
                     }
 
                     if (uiState.isLoadingMore) {
-                        item {
+                        item(key = "works_loading_more") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

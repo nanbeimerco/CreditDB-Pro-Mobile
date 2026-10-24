@@ -62,27 +62,24 @@ fun PredictScreen(
         "cv"
     )
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
-    ) {
-        // 1. プリセット操作バー（プルダウン + 編成保存 + 一括クリア）
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // プリセット・プルダウン選択
+    // 上部1行フローティングバー: [プリセット選択ガラスカプセル] [編成保存] [一括クリア] [⋮]
+    com.creditdb.pro.ui.glass.ProvideTopBar {
+        val glassEnabled = com.creditdb.pro.ui.glass.LocalLiquidGlassEnabled.current && com.creditdb.pro.ui.glass.isGlassSupported()
+        val contentColor = if (glassEnabled) com.creditdb.pro.ui.glass.glassContentColor() else MaterialTheme.colorScheme.onSurface
+        val capsuleShape = androidx.compose.foundation.shape.CircleShape
+
+        com.creditdb.pro.ui.glass.FloatingTopBarRow {
+            // 1. プリセット選択ガラスカプセル（タップで GlassDropdownMenu）
             Box(modifier = Modifier.weight(1f)) {
-                OutlinedButton(
-                    onClick = { presetDropdownExpanded = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                    shape = RoundedCornerShape(8.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(com.creditdb.pro.ui.glass.TopBarGlassButtonSize)
+                        .then(com.creditdb.pro.ui.glass.topBarGlass(capsuleShape))
+                        .clip(capsuleShape)
+                        .clickable { presetDropdownExpanded = true }
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.CenterStart
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -97,8 +94,9 @@ fun PredictScreen(
                         }
                         Text(
                             text = labelText,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = contentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
@@ -107,15 +105,15 @@ fun PredictScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = if (isEn) "Expand presets" else "プリセット一覧を展開",
+                            tint = contentColor,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                DropdownMenu(
+                com.creditdb.pro.ui.glass.GlassDropdownMenu(
                     expanded = presetDropdownExpanded,
                     onDismissRequest = { presetDropdownExpanded = false },
-                    modifier = Modifier.widthIn(min = 220.dp, max = 320.dp)
                 ) {
                     if (uiState.presets.isEmpty()) {
                         DropdownMenuItem(
@@ -176,124 +174,122 @@ fun PredictScreen(
                 }
             }
 
-            // 編成保存ボタン
-            FilledTonalButton(
+            // 2. 編成保存ガラスボタン
+            com.creditdb.pro.ui.glass.TopBarGlassButton(
                 onClick = { showSavePresetDialog = true },
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isEn) "Save" else "保存", style = MaterialTheme.typography.labelSmall)
-            }
+                icon = Icons.Default.BookmarkBorder,
+                contentDescription = if (isEn) "Save Preset" else "編成保存",
+            )
 
-            // 一括クリアボタン
-            OutlinedButton(
+            // 3. 一括クリアガラスボタン
+            com.creditdb.pro.ui.glass.TopBarGlassButton(
                 onClick = { viewModel.clearAllStaff() },
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-            ) {
-                Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = if (isEn) "Clear All" else "一括クリア", modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isEn) "Clear" else "クリア", style = MaterialTheme.typography.labelSmall)
-            }
+                icon = Icons.Default.DeleteOutline,
+                contentDescription = if (isEn) "Clear All" else "一括クリア",
+            )
+
+            // 4. 右端「⋮」メニューボタン
+            com.creditdb.pro.ui.glass.LocalOverflowMenuButton.current()
         }
+    }
 
-        // 2. 予測結果サマリーカード (固定表示)
-        val pred = uiState.predictionResult
-        if (pred != null) {
-            val tierSpec = TierTheme.forTier(pred.tier)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // 予測結果サマリーカード + 9役職編成リストを単一 LazyColumn で一体スクロール
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                horizontal = 12.dp,
+                extraTop = 4.dp,
+                extraBottom = 8.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val pred = uiState.predictionResult
+            if (pred != null) {
+                item(key = "prediction_summary_card") {
+                    val tierSpec = TierTheme.forTier(pred.tier)
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        Column {
-                            Text(
-                                text = if (isEn) "Predicted Quality Index" else "予測クオリティ指数",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = pred.verdict,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        TierBadge(tier = pred.tier, prefix = if (isEn) "Pred " else "予測 ")
-                    }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = if (isEn) "Predicted Quality Index" else "予測クオリティ指数",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = pred.verdict,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                TierBadge(tier = pred.tier, prefix = if (isEn) "Pred " else "予測 ")
+                            }
 
-                    // 3大指標
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .padding(vertical = 8.dp, horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(if (isEn) "Latent Z" else "潜在 Z値", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                text = String.format("%+.3f", pred.predictedZ),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(if (isEn) "AniList Equiv" else "換算AniList点", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                text = if (isEn) String.format("%.1f pts", pred.predictedScore) else String.format("%.1f点", pred.predictedScore),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(if (isEn) "Predicted Dev" else "予測偏差値", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                text = String.format("%.1f", pred.deviationScore),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = tierSpec.accent
-                            )
+                            // 3大指標
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                                    .padding(vertical = 8.dp, horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(if (isEn) "Latent Z" else "潜在 Z値", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        text = String.format("%+.3f", pred.predictedZ),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(if (isEn) "AniList Equiv" else "換算AniList点", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        text = if (isEn) String.format("%.1f pts", pred.predictedScore) else String.format("%.1f点", pred.predictedScore),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(if (isEn) "Predicted Dev" else "予測偏差値", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        text = String.format("%.1f", pred.deviationScore),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = tierSpec.accent
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // 3. 9役職編成リスト (LazyColumn)
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(rolesList) { roleKey ->
+            items(rolesList, key = { it }) { roleKey ->
                 RoleCompositionRow(
                     roleKey = roleKey,
                     staffNames = uiState.staffMap[roleKey] ?: emptyList(),

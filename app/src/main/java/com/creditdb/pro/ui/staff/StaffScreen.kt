@@ -63,13 +63,8 @@ fun StaffScreen(
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
     val roles = listOf("all") + RoleConstants.ROLE_ORDER
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
-    ) {
-        // 1. スマート1行検索バー
+    // 上部1行フローティング検索バー（検索カプセル + フィルタ丸ボタン + ⋮メニュー）
+    com.creditdb.pro.ui.glass.ProvideTopBar {
         SmartSearchBar(
             query = uiState.searchQuery,
             onQueryChange = viewModel::onSearchQueryChange,
@@ -77,87 +72,106 @@ fun StaffScreen(
                 viewModel.setFilterSheetVisible(true)
             },
             hasActiveFilters = uiState.hasActiveFilters,
-            placeholder = if (isEn) com.creditdb.pro.ui.theme.AppStrings.searchPlaceholderEn else "スタッフ・声優・制作スタジオ名で検索..."
+            placeholder = if (isEn) com.creditdb.pro.ui.theme.AppStrings.searchPlaceholderEn else "スタッフ・声優・制作スタジオ名で検索...",
         )
+    }
 
-        // 2. 11部門+スタジオ ロールセレクター (水平スクロール)
-        com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
-            options = roles,
-            selected = uiState.selectedRole,
-            onSelect = { viewModel.onRoleSelect(it) },
-            label = { com.creditdb.pro.data.RoleDefinitions.getShortDisplayName(it, isEn) },
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-        )
-
-        // 3. スリムステータスバー (件数 & 条件表示)
-        // Tier 指定は検索窓右のフィルタボタンから開くシートで行う（一覧の表示領域を優先）
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val n = uiState.totalCount
-            val countLabel = when {
-                uiState.selectedRole == "studio" -> if (isEn) "$n Studios" else "$n スタジオ"
-                uiState.selectedRole == "cv" -> if (isEn) "$n Voice Actors" else "$n 名の声優"
-                // 「全スタッフ」は声優を含まない（検索時のみ声優も表示する）
-                uiState.selectedRole == "all" && uiState.searchQuery.isBlank() -> if (isEn) "$n Creators" else "$n 名のスタッフ"
-                else -> if (isEn) "$n Creators & Cast" else "$n 名のスタッフ・声優"
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
+                contentAlignment = Alignment.Center
+            ) {
+                AppLoadingIndicator(contained = true, size = 56.dp)
             }
-            com.creditdb.pro.ui.components.CountLabel(text = countLabel, modifier = Modifier.weight(1f))
+        } else {
+            LazyColumn(
+                state = listState,
+                contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                    horizontal = 12.dp,
+                    extraTop = 2.dp,
+                    extraBottom = 8.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // 先頭アイテム: 部門セレクター (M3 Expressive SingleChoiceButtonGroup) + 件数 & 条件ピル
+                item(key = "staff_header_controls") {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+                            options = roles,
+                            selected = uiState.selectedRole,
+                            onSelect = { viewModel.onRoleSelect(it) },
+                            label = { com.creditdb.pro.data.RoleDefinitions.getShortDisplayName(it, isEn) },
+                        )
 
-            run {
-                val conditionLabel = buildString {
-                    if (uiState.debutEra != DebutEraFilter.ALL) {
-                        append(uiState.debutEra.getDisplayName(isEn))
-                        append(" · ")
-                    }
-                    if (uiState.crossTierFilter != "all" && uiState.selectedRole != "studio") {
-                        val prefix = if (uiState.sortOption == StaffSortOption.CUMULATIVE) {
-                            if (isEn) "S(a):" else "実力:"
-                        } else {
-                            if (isEn) "ΣZ:" else "累計:"
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val n = uiState.totalCount
+                            val countLabel = when {
+                                uiState.selectedRole == "studio" -> if (isEn) "$n Studios" else "$n スタジオ"
+                                uiState.selectedRole == "cv" -> if (isEn) "$n Voice Actors" else "$n 名の声優"
+                                uiState.selectedRole == "all" && uiState.searchQuery.isBlank() -> if (isEn) "$n Creators" else "$n 名のスタッフ"
+                                else -> if (isEn) "$n Creators & Cast" else "$n 名のスタッフ・声優"
+                            }
+                            com.creditdb.pro.ui.components.CountLabel(text = countLabel, modifier = Modifier.weight(1f))
+
+                            val conditionLabel = buildString {
+                                if (uiState.debutEra != DebutEraFilter.ALL) {
+                                    append(uiState.debutEra.getDisplayName(isEn))
+                                    append(" · ")
+                                }
+                                if (uiState.crossTierFilter != "all" && uiState.selectedRole != "studio") {
+                                    val prefix = if (uiState.sortOption == StaffSortOption.CUMULATIVE) {
+                                        if (isEn) "S(a):" else "実力:"
+                                    } else {
+                                        if (isEn) "ΣZ:" else "累計:"
+                                    }
+                                    append("$prefix${uiState.crossTierFilter} · ")
+                                }
+                                append(uiState.sortOption.getDisplayName(isEn))
+                            }
+                            com.creditdb.pro.ui.components.SortLabelPill(
+                                text = conditionLabel,
+                                onClick = { viewModel.setFilterSheetVisible(true) },
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
                         }
-                        append("$prefix${uiState.crossTierFilter} · ")
                     }
-                    append(uiState.sortOption.getDisplayName(isEn))
                 }
-                com.creditdb.pro.ui.components.SortLabelPill(
-                    text = conditionLabel,
-                    onClick = { viewModel.setFilterSheetVisible(true) },
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-            }
-        }
 
-        // 4. リーダーボードリスト
-        Box(modifier = Modifier.weight(1f)) {
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    AppLoadingIndicator(contained = true, size = 56.dp)
-                }
-            } else if (uiState.items.isEmpty()) {
-                val emptyText = if (isEn) {
-                    if (uiState.selectedRole == "studio") "No matching animation studios found" else "No matching creators or cast found"
+                if (uiState.items.isEmpty()) {
+                    item(key = "staff_empty") {
+                        val emptyText = if (isEn) {
+                            if (uiState.selectedRole == "studio") "No matching animation studios found" else "No matching creators or cast found"
+                        } else {
+                            if (uiState.selectedRole == "studio") "該当する制作スタジオが見つかりませんでした" else "該当するスタッフ・声優が見つかりませんでした"
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = emptyText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 } else {
-                    if (uiState.selectedRole == "studio") "該当する制作スタジオが見つかりませんでした" else "該当するスタッフ・声優が見つかりませんでした"
-                }
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = emptyText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
                     itemsIndexed(
                         items = uiState.items,
                         key = { _, item -> "${item.role}_${item.name}" }
@@ -176,7 +190,7 @@ fun StaffScreen(
                     }
 
                     if (uiState.isLoadingMore) {
-                        item {
+                        item(key = "staff_loading_more") {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
