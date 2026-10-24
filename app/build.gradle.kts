@@ -73,6 +73,10 @@ dependencies {
     // Image loading
     implementation(libs.coil.compose)
 
+    // Haze (progressive blur)
+    implementation(libs.haze)
+    implementation(libs.haze.materials)
+
     // Kotlinx Serialization & Coroutines
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)

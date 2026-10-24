@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppSettings.init(this)
+        com.creditdb.pro.ui.glass.GlassSettings.init(this)
         com.creditdb.pro.ui.theme.LanguageManager.init(this)
         com.creditdb.pro.data.StaffNameResolver.init(this)
         com.creditdb.pro.data.CharacterNameResolver.init(this)
