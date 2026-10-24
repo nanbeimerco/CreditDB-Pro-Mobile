@@ -4,12 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,6 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.creditdb.pro.ui.glass.GlassSettings
+import com.creditdb.pro.ui.glass.isGlassSupported
 import com.creditdb.pro.ui.theme.ColorPresetSpec
 import com.creditdb.pro.ui.theme.ColorPresets
 import com.creditdb.pro.ui.theme.ThemeManager
@@ -30,6 +36,9 @@ fun ThemePaletteBottomSheet(
     val currentPreset = ThemeManager.currentPreset
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
     val currentLang = com.creditdb.pro.ui.theme.LanguageManager.currentLanguage
+    val liquidGlassEnabled by GlassSettings.liquidGlass.collectAsState()
+    val reduceDynamicBlur by GlassSettings.reduceDynamicBlur.collectAsState()
+    val glassSupported = isGlassSupported()
 
     com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -38,6 +47,7 @@ fun ThemePaletteBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp)
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -67,6 +77,90 @@ fun ThemePaletteBottomSheet(
                 },
                 scrollable = false
             )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+
+            // Liquid Glass 表示設定セクション
+            Text(
+                text = if (isEn) "Display & Glass Effects" else "表示・ガラス効果設定",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // スイッチ 1: Liquid Glass ON/OFF
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = glassSupported) {
+                        GlassSettings.setLiquidGlass(!liquidGlassEnabled)
+                    }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(
+                        text = "Liquid Glass",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (glassSupported) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (glassSupported) {
+                            if (isEn) "Real-time optical refraction & blur for floating bars and sheets"
+                            else "フローティングバーやシートにリアルタイム屈折・ブラーを適用します"
+                        } else {
+                            if (isEn) "Available on Android 12+"
+                            else "Android 12 以上で利用可"
+                        },
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = liquidGlassEnabled && glassSupported,
+                    onCheckedChange = { GlassSettings.setLiquidGlass(it) },
+                    enabled = glassSupported
+                )
+            }
+
+            // スイッチ 2: 透明度を下げる (Reduce Transparency)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        GlassSettings.setReduceDynamicBlur(!reduceDynamicBlur)
+                    }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(
+                        text = if (isEn) "Reduce Transparency" else "透明度を下げる",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (isEn) {
+                            "Suppresses dynamic blur & refraction for higher contrast and lower GPU load"
+                        } else {
+                            "動的ブラーと屈折を抑え、視認性と省電力性を高めた不透明サーフェスにします"
+                        },
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = reduceDynamicBlur,
+                    onCheckedChange = { GlassSettings.setReduceDynamicBlur(it) }
+                )
+            }
 
             HorizontalDivider(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),

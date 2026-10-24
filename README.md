@@ -104,6 +104,22 @@ CreditDB Pro for Android/
 ├── gradle/
 │   ├── libs.versions.toml                   # バージョンカタログ
 │   └── wrapper/                             # Gradle 8.10.2 Wrapper
+├── LICENSE                                  # GNU General Public License v3.0 (GPL-3.0)
 ├── build.gradle.kts
 └── settings.gradle.kts
 ```
+
+---
+
+## 📜 ライセンス & 謝辞 (License & Attribution)
+
+本プロジェクトは **GNU General Public License v3.0 (GPL-3.0)** の下で提供されています。詳細は [`LICENSE`](LICENSE) を参照してください。
+
+### 使用・翻案しているオープンソースコンポーネント
+- **[Tinque](https://github.com/nanbeimerco/Tinque)** (`GPL-3.0`):
+  - Liquid Glass UI コンポーネント群（`ui/glass/**`：フローティングタブバー、フローティングトップバー、ガラスシート/メニュー、光学レンズ屈折エフェクト等）を翻案・統合しています。
+- **[Kyant0 / AndroidLiquidGlass (backdrop)](https://github.com/Kyant0/AndroidLiquidGlass)** (`Apache-2.0`):
+  - Tinque 経由で同梱されている AGSL `RuntimeShader` ベースの光学屈折・分散・ブラーバックドロップエンジン（`ui/glass/backdrop/**`）。
+- **[Haze](https://github.com/chrisbanes/haze)** (`Apache-2.0`):
+  - 上部ステータスバー周辺の段階的フェードブラー（`TopFadeBlur`）に使用。
+
