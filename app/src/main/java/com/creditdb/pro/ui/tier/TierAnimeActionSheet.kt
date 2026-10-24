@@ -46,10 +46,8 @@ fun TierAnimeActionSheet(
     val displayTitle = anime.getDisplayTitle(isEn).first
     val tierColorSpec = TierTheme.forTier(anime.tier)
 
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier

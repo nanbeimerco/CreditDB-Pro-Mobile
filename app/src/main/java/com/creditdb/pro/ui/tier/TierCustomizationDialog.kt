@@ -51,18 +51,17 @@ fun TierCustomizationDialog(
     var newRowColor by remember { mutableStateOf(TierStorageManager.COLOR_PRESETS.first()) }
     var isAddingNew by remember { mutableStateOf(false) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.88f)
-                .padding(vertical = 12.dp)
+    val sheets = com.creditdb.pro.ui.glass.LocalGlassSheets.current
+    if (sheets != null) {
+        com.creditdb.pro.ui.glass.GlassSheet(
+            controller = sheets,
+            kind = com.creditdb.pro.ui.glass.GlassSheetKind.Dialog,
+            onDismiss = onDismiss,
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
                     .padding(20.dp)
             ) {
                 Row(

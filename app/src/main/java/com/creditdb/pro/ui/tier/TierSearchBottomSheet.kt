@@ -82,13 +82,10 @@ fun TierSearchBottomSheet(
         onDispose {}
     }
 
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         contentWindowInsets = { WindowInsets.navigationBars.union(WindowInsets.ime) },
-        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier

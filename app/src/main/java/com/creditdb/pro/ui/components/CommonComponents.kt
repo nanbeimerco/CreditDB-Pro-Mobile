@@ -375,11 +375,9 @@ fun WorkFilterBottomSheet(
     isCompareMode: Boolean = false
 ) {
     val isEn = LanguageManager.isEnglish
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface,
-        scrimColor = Color.Black.copy(alpha = 0.6f)
     ) {
         Column(
             modifier = Modifier
@@ -546,11 +544,9 @@ fun StaffFilterBottomSheet(
     onReset: () -> Unit
 ) {
     val isEn = LanguageManager.isEnglish
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface,
-        scrimColor = Color.Black.copy(alpha = 0.6f)
     ) {
         Column(
             modifier = Modifier
@@ -662,7 +658,7 @@ fun DatabaseUpdateDialog(
     onDismiss: () -> Unit
 ) {
     val isEn = LanguageManager.isEnglish
-    AlertDialog(
+    com.creditdb.pro.ui.glass.GlassAlertDialog(
         onDismissRequest = {
             if (!isUpdating) onDismiss()
         },

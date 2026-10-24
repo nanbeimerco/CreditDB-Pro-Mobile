@@ -314,7 +314,7 @@ fun PredictScreen(
 
     // 5. プリセット保存ダイアログ
     if (showSavePresetDialog) {
-        AlertDialog(
+        com.creditdb.pro.ui.glass.GlassAlertDialog(
             onDismissRequest = { showSavePresetDialog = false },
             title = { Text(if (isEn) "Save Current Lineup as Preset" else "現在の編成をプリセット保存") },
             text = {
@@ -350,7 +350,7 @@ fun PredictScreen(
     // 6. プリセット削除確認ダイアログ
     if (presetToDelete != null) {
         val target = presetToDelete!!
-        AlertDialog(
+        com.creditdb.pro.ui.glass.GlassAlertDialog(
             onDismissRequest = { presetToDelete = null },
             title = { Text(if (isEn) "Delete Preset" else "プリセットの削除") },
             text = { Text(if (isEn) "Delete preset \"${target.name}\"?" else "プリセット「${target.name}」を削除しますか？") },
@@ -537,10 +537,9 @@ fun CandidatePickerBottomSheet(
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
     val roleName = com.creditdb.pro.data.RoleDefinitions.getDisplayName(roleKey, isEn)
 
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier

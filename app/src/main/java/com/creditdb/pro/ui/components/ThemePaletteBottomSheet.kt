@@ -31,12 +31,9 @@ fun ThemePaletteBottomSheet(
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
     val currentLang = com.creditdb.pro.ui.theme.LanguageManager.currentLanguage
 
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = modalBottomSheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier

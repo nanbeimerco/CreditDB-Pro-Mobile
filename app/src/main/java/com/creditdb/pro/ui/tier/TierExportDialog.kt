@@ -61,7 +61,7 @@ fun TierExportDialog(
         )
     }
 
-    AlertDialog(
+    com.creditdb.pro.ui.glass.GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(

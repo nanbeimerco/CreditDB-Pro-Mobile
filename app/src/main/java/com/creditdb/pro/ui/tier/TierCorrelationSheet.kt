@@ -35,10 +35,8 @@ fun TierCorrelationSheet(
         TierAnalysisEngine.calculateTasteCorrelation(config)
     }
 
-    ModalBottomSheet(
+    com.creditdb.pro.ui.glass.GlassModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         modifier = Modifier.fillMaxHeight(0.85f)
     ) {
         Column(
