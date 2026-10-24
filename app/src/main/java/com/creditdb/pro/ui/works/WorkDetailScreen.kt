@@ -68,37 +68,36 @@ fun WorkDetailScreen(
     }
 
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val isScrolled by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 120
+        }
+    }
+    val topBarTitle = workDetail?.getDisplayTitle(isEn)?.first
+        ?: (if (isEn) "Work Details" else "作品詳細")
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (isEn) "Work Details" else "作品詳細",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (isEn) "Back" else "戻る"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    // 上部1行フローティングバー: 戻るボタン + スクロール時に作品名カプセルがフェードイン
+    com.creditdb.pro.ui.glass.ProvideTopBar {
+        com.creditdb.pro.ui.glass.FloatingTopBar(
+            title = topBarTitle,
+            scrolled = isScrolled,
+            onBack = onBackClick,
+            glassBackdrop = true,
+            backDescription = if (isEn) "Back" else "戻る",
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         if (isLoading) {
             Box(
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
                 contentAlignment = Alignment.Center
             ) {
                 AppLoadingIndicator(contained = true, size = 56.dp)
@@ -106,8 +105,8 @@ fun WorkDetailScreen(
         } else if (workDetail == null) {
             Box(
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -123,10 +122,13 @@ fun WorkDetailScreen(
             val episodeStaff = remember(work) { com.creditdb.pro.data.buildEpisodeStaff(work.staffByRole) }
 
             LazyColumn(
-                modifier = modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                    horizontal = 16.dp,
+                    extraTop = 4.dp,
+                    extraBottom = 16.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // 1. タイトル & 基本情報ヘッダー

@@ -105,49 +105,49 @@ fun StudioDetailScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (isEn) "Animation Studio Details" else "制作スタジオ詳細",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (isEn) "Back" else "戻る"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val isScrolled by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 120
+        }
+    }
+    val primaryStudioName = com.creditdb.pro.data.StaffNameResolver.getStudioName(studioName, isEn)
+    val secondaryStudioName = if (isEn && primaryStudioName != studioName) studioName else null
+
+    // 上部1行フローティングバー: 戻るボタン + スクロール時にスタジオ名カプセルがフェードイン
+    com.creditdb.pro.ui.glass.ProvideTopBar {
+        com.creditdb.pro.ui.glass.FloatingTopBar(
+            title = primaryStudioName,
+            scrolled = isScrolled,
+            onBack = onBackClick,
+            glassBackdrop = true,
+            backDescription = if (isEn) "Back" else "戻る",
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         if (isLoading) {
             Box(
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
                 contentAlignment = Alignment.Center
             ) {
                 AppLoadingIndicator(contained = true, size = 56.dp)
             }
         } else {
-            val primaryStudioName = com.creditdb.pro.data.StaffNameResolver.getStudioName(studioName, isEn)
-            val secondaryStudioName = if (isEn && primaryStudioName != studioName) studioName else null
-
             LazyColumn(
-                modifier = modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                    horizontal = 16.dp,
+                    extraTop = 4.dp,
+                    extraBottom = 16.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // 1. スタジオ名ヘッダーカード
@@ -227,62 +227,23 @@ fun StudioDetailScreen(
                 }
                 }
 
-                // 2. セグメント切り替えタブ (主要制作陣 / 制作作品一覧)
+                // 2. セグメント切り替え (M3 Expressive SingleChoiceButtonGroup: 主要制作陣 / 制作作品一覧)
                 item {
                     Column(modifier = Modifier.padding(bottom = 16.dp)) {
-                    PrimaryTabRow(
-                        selectedTabIndex = selectedTabIndex,
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        contentColor = MaterialTheme.colorScheme.primary,
-                        divider = {},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.large)
-                    ) {
-                        Tab(
-                            selected = selectedTabIndex == 0,
-                            onClick = { selectedTabIndex = 0 },
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.People,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = if (isEn) "Key Creators (${staffList.size})" else "主要制作陣 (${staffList.size})",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
+                        com.creditdb.pro.ui.components.SingleChoiceButtonGroup(
+                            options = listOf(0, 1),
+                            selected = selectedTabIndex,
+                            onSelect = { selectedTabIndex = it },
+                            label = { idx ->
+                                if (idx == 0) {
+                                    if (isEn) "Key Creators (${staffList.size})" else "主要制作陣 (${staffList.size})"
+                                } else {
+                                    if (isEn) "Works (${works.size})" else "制作作品 (${works.size})"
                                 }
-                            }
-                        )
-                        Tab(
-                            selected = selectedTabIndex == 1,
-                            onClick = { selectedTabIndex = 1 },
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Movie,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = if (isEn) "Works (${works.size})" else "制作作品 (${works.size})",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
+                            },
+                            scrollable = false,
                         )
                     }
-                }
                 }
 
                 // 3. タブコンテンツ

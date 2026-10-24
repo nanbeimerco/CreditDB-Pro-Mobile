@@ -11,6 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,38 +33,38 @@ fun GuideScreen(
     modifier: Modifier = Modifier
 ) {
     val isEn = LanguageManager.isEnglish
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            if (onBackClick != null) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = if (isEn) "Mathematical Guide" else "数理解説ガイド",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = if (isEn) "Back" else "戻る"
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
-            }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val isScrolled by remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 80
         }
-    ) { paddingValues ->
+    }
+
+    // 上部1行フローティングバー: 戻るボタン + タイトルカプセル
+    com.creditdb.pro.ui.glass.ProvideTopBar {
+        com.creditdb.pro.ui.glass.FloatingTopBar(
+            title = if (isEn) "Mathematical Guide" else "数理解説ガイド",
+            scrolled = isScrolled,
+            alwaysShowTitle = true,
+            onBack = onBackClick,
+            glassBackdrop = true,
+            backDescription = if (isEn) "Back" else "戻る",
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                horizontal = 16.dp,
+                extraTop = 4.dp,
+                extraBottom = 16.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // ==========================================

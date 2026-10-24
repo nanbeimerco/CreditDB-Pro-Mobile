@@ -63,37 +63,38 @@ fun StaffDetailScreen(
     }
 
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val isScrolled by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 120
+        }
+    }
+    val topBarTitle = remember(profile, isEn, staffName) {
+        val raw = profile?.name ?: staffName
+        if (isEn) com.creditdb.pro.data.StaffNameResolver.getStaffName(raw, true) else raw
+    }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (isEn) "Creator Details" else "クリエイター詳細",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (isEn) "Back" else "戻る"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { innerPadding ->
+    // 上部1行フローティングバー: 戻るボタン + スクロール時にスタッフ名カプセルがフェードイン
+    com.creditdb.pro.ui.glass.ProvideTopBar {
+        com.creditdb.pro.ui.glass.FloatingTopBar(
+            title = topBarTitle,
+            scrolled = isScrolled,
+            onBack = onBackClick,
+            glassBackdrop = true,
+            backDescription = if (isEn) "Back" else "戻る",
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         if (isLoading) {
             Box(
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
                 contentAlignment = Alignment.Center
             ) {
                 AppLoadingIndicator(contained = true, size = 56.dp)
@@ -101,8 +102,8 @@ fun StaffDetailScreen(
         } else if (profile == null) {
             Box(
                 modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -116,10 +117,13 @@ fun StaffDetailScreen(
             val isCv = prof.primaryRole == "cv"
 
             LazyColumn(
-                modifier = modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = com.creditdb.pro.ui.glass.rememberChromeContentPadding(
+                    horizontal = 16.dp,
+                    extraTop = 4.dp,
+                    extraBottom = 16.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
                 // 1. スタッフ名ヘッダーカード
