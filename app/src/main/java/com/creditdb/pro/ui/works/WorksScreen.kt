@@ -59,6 +59,7 @@ fun WorksScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
     ) {
         val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
 

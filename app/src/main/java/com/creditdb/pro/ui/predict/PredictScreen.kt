@@ -66,6 +66,7 @@ fun PredictScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
     ) {
         // 1. プリセット操作バー（プルダウン + 編成保存 + 一括クリア）
         Row(

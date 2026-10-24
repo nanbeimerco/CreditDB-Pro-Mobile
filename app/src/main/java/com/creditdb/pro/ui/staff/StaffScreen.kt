@@ -67,6 +67,7 @@ fun StaffScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
     ) {
         // 1. スマート1行検索バー
         SmartSearchBar(

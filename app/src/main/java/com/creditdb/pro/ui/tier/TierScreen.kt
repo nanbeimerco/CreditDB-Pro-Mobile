@@ -73,7 +73,9 @@ fun TierScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(com.creditdb.pro.ui.glass.LocalChromePadding.current)
         ) {
             // 1. トップバー (Title + Subtitle + 4つの機能アイコン: 分析, 診断, 行編集, エクスポート)
             val rhoStr = if (correlation.sampleSize >= 3) {
