@@ -678,9 +678,9 @@ fun GuideScreen(
                     )
                     Text(
                         text = if (isEn) {
-                            "Validation: fitted on works up to 2022, then used to predict the score (Z) of works from 2023 on, from their staff. Higher r is better."
+                            "Validation: fitted on works up to ${validationTrainEnd(validation)}, then used to predict the score (Z) of works from ${validationTrainEnd(validation) + 1} on, from their staff. Higher r is better."
                         } else {
-                            "検証: 2022年までの作品で推定し、2023年以降の作品の評価（Z）をスタッフ構成から予測したときの相関 r（大きいほど当たる）。"
+                            "検証: ${validationTrainEnd(validation)}年までの作品で推定し、${validationTrainEnd(validation) + 1}年以降の作品の評価（Z）をスタッフ構成から予測したときの相関 r（大きいほど当たる）。"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
@@ -1076,7 +1076,7 @@ private fun ValidationTable(validation: List<com.creditdb.pro.data.MetricValidat
             val ep = byRole.values.flatten().filter { it.method == "episode" }
             if (ep.isNotEmpty()) {
                 Text(
-                    text = (if (isEn) "Episode Score → predicting 2023+ episodes (n = ${ep.first().n}): " else "各話評価 → 2023年以降の各話の予測（${ep.first().n}話）: ") +
+                    text = (if (isEn) "Episode Score → predicting ${validationTrainEnd(validation) + 1}+ episodes (n = ${ep.first().n}): " else "各話評価 → ${validationTrainEnd(validation) + 1}年以降の各話の予測（${ep.first().n}話）: ") +
                         ep.joinToString(" / ") { "${if (isEn) it.role.replace("各話評価で予測", "Episode Score").replace("総合実力で予測", "S(a)") else it.role} r = ${fmt(it.pearson)}" },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1096,3 +1096,7 @@ private fun ValidationTable(validation: List<com.creditdb.pro.data.MetricValidat
         }
     }
 }
+
+/** 検証で推定に使った最後の年（毎年ずれる）。古い DB には記録が無いので 2022 とみなす */
+private fun validationTrainEnd(validation: List<com.creditdb.pro.data.MetricValidation>): Int =
+    validation.firstOrNull { it.method == "train_end" }?.pearson?.toInt() ?: 2022

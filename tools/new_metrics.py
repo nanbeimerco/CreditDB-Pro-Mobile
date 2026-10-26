@@ -12,10 +12,12 @@
     共演者の実力やスタジオ・シリーズの人気に便乗した分を除いた値。役職ごとに推定する。
 
   検証（metric_validation テーブル）
-    2022年までのデータで推定し、2023年以降の作品Zをスタッフ構成から予測して相関を比べる。
+    直近4年（今年を含む。2026年なら2023年以降）より前のデータで推定し、直近4年の作品Zを
+    スタッフ構成から予測して相関を比べる。年は実行した年に合わせて毎年ずれる。
     比べる方法: 現行方式（参加度なし）/ 参加度の重み付け（3-1）/ 個人寄与度（3-3）。
-    正則化の強さは、2019年まで→2020〜2022年の予測で選ぶ（検証に使う2023年以降の作品は選ぶのに使わない）。
+    正則化の強さは、その手前の3年を予測して選ぶ（検証に使う直近4年の作品は選ぶのに使わない）。
 """
+import datetime
 import math
 import statistics
 from collections import defaultdict
@@ -26,8 +28,10 @@ EP_VOTE_PRIOR = 20.0       # 票数の信頼度 v / (v + 20)
 EP_MIN_RATED = 4           # 各話評価が4話以上ある作品だけを使う
 EP_SD_FLOOR = 0.2          # 作品内の評価の散らばりがごく小さいときに偏差が大きくなりすぎないように
 EP_M = 3.0                 # 各話評価の縮小の強さ（話数の単位）
-TRAIN_END, TEST_START = 2022, 2023
-TUNE_END = 2019
+# 検証の期間（実行した年に合わせて毎年ずれる。2026年なら 推定 〜2022 / 検証 2023〜 / 正則化選び 〜2019 → 2020〜2022）
+TEST_START = datetime.date.today().year - 3
+TRAIN_END = TEST_START - 1
+TUNE_END = TRAIN_END - 3
 MIN_WORKS_CONTRIB = 3      # 個人寄与度を出す最少の作品数
 MIN_EPISODES_EP = 5        # 各話評価を出す最少の話数
 DAMP_GRID = (0.1, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0)
@@ -121,7 +125,7 @@ def episode_metric(recs_by_role_person, ep_z):
 
 def _validate_episode(recs_by_role_person, ep_z, work_years, work_z, m_of):
     """
-    2022年までの各話評価で、2023年以降の各話の ep_z を予測できるか（その話の担当者の値の平均で予測）。
+    TRAIN_END 年までの各話評価で、TEST_START 年以降の各話の ep_z を予測できるか（その話の担当者の値の平均で予測）。
     比較: 同じ担当者の総合実力 S(a)（作品単位の評価）で予測した場合。
     """
     train_ep = {w: v for w, v in ep_z.items() if work_years.get(w, 0) <= TRAIN_END}
@@ -277,7 +281,7 @@ def compute(conn, recs_by_role_person, work_z, work_years, series_key, studio_of
     if ep_z:
         for label, r, rho, n in _validate_episode(recs_by_role_person, ep_z, work_years, work_z, m_of):
             val_rows.append((label, "episode", r, rho, n))
-            log(f"  [3-4] 各話評価 {label}: 2023年以降の各話 n={n} r={_fmt(r)}")
+            log(f"  [3-4] 各話評価 {label}: {TEST_START}年以降の各話 n={n} r={_fmt(r)}")
             summary.append(f"| 各話（{label}） | {n} | {_fmt(r)} |")
 
     # 3-3 個人寄与度
@@ -306,7 +310,7 @@ def compute(conn, recs_by_role_person, work_z, work_years, series_key, studio_of
         ids_all = [w for w in work_z if shares.get(w)]
         if len(ids_all) < 50:
             continue
-        # 正則化の強さを 〜2019 → 2020〜2022 で選ぶ
+        # 正則化の強さを 〜TUNE_END → TUNE_END+1〜TRAIN_END で選ぶ
         tune_tr = [w for w in ids_all if work_years.get(w, 0) <= TUNE_END]
         tune_va = [w for w in ids_all if TUNE_END < work_years.get(w, 0) <= TRAIN_END]
         best_damp, best_r = 1.0, -2.0
@@ -318,7 +322,7 @@ def compute(conn, recs_by_role_person, work_z, work_years, series_key, studio_of
             if r is not None and r > best_r:
                 best_r, best_damp = r, d
 
-        # 検証: 〜2022 で推定 → 2023〜 を予測
+        # 検証: 〜TRAIN_END で推定 → TEST_START〜 を予測
         train = [w for w in ids_all if work_years.get(w, 0) <= TRAIN_END]
         test = [w for w in ids_all if work_years.get(w, 0) >= TEST_START]
         train_set = set(train)
@@ -362,6 +366,8 @@ def compute(conn, recs_by_role_person, work_z, work_years, series_key, studio_of
                 v = b * share_sum[name] / n_works[name] if label == "all" else b
                 contrib[(label, name)] = (v, n_works[name])
     rows += _rank_rows(contrib, "contribution", tier_fn)
+    # アプリのガイドが検証の期間を表示できるように、推定に使った最後の年を入れておく
+    val_rows.append(("meta", "train_end", float(TRAIN_END), None, 0))
     return rows, val_rows, summary
 
 

@@ -1639,7 +1639,8 @@ def main():
     # Step 4: Recalculate all metrics & resolve staff tiers
     metric_summary = recalculate_all_metrics_and_resolve_tiers(conn)
     if metric_summary:
-        write_step_summary(["", "### 新指標の検証（2022年までで推定 → 2023年以降の作品Zの予測との相関 r）", "",
+        import new_metrics
+        write_step_summary(["", f"### 新指標の検証（{new_metrics.TRAIN_END}年までで推定 → {new_metrics.TEST_START}年以降の作品Zの予測との相関 r）", "",
                             "| 役職 | 作品数 | 現行方式 | 参加度の重み付け | 個人寄与度 | 個人寄与度（人だけ） | 正則化 |",
                             "|---|---|---|---|---|---|---|"] + metric_summary)
 
