@@ -15,3 +15,8 @@ captures/
 *.bak
 *.tmp
 __pycache__/
+
+# 同梱用 DB はビルド時に Release から取得する（app/build.gradle.kts の fetchBundledDb）
+/creditdb.zip
+app/src/main/assets/creditdb.zip
+*.part

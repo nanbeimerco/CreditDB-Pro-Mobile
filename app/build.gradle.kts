@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -90,3 +92,26 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
+// 同梱用の DB（assets/creditdb.zip）は git に入れず、ビルド時に最新の Release から取得する。
+// 取得し直すときは ./gradlew assembleDebug -PrefreshDb
+val bundledDb = file("src/main/assets/creditdb.zip")
+val refreshBundledDb = providers.gradleProperty("refreshDb").isPresent
+val fetchBundledDb by tasks.registering {
+    description = "最新の Release から同梱用の creditdb.zip をダウンロードする"
+    outputs.file(bundledDb)
+    onlyIf { refreshBundledDb || !bundledDb.exists() }
+    doLast {
+        val api = URI("https://api.github.com/repos/nanbeimerco/CreditDB-Pro-Mobile/releases?per_page=30").toURL()
+        val json = api.openStream().use { it.readBytes().toString(Charsets.UTF_8) }
+        // Release は新しい順に並ぶので、最初に見つかった creditdb.zip が最新
+        val url = Regex(""""browser_download_url"\s*:\s*"([^"]+/creditdb\.zip)"""").find(json)?.groupValues?.get(1)
+            ?: throw GradleException("creditdb.zip を含む Release が見つかりません")
+        logger.lifecycle("同梱用 DB をダウンロード: $url")
+        bundledDb.parentFile.mkdirs()
+        val tmp = File(bundledDb.path + ".part")
+        URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        if (!tmp.renameTo(bundledDb)) { bundledDb.delete(); tmp.renameTo(bundledDb) }
+    }
+}
+tasks.named("preBuild") { dependsOn(fetchBundledDb) }
