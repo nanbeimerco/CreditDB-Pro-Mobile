@@ -541,6 +541,7 @@ fun StaffFilterBottomSheet(
     onDebutEraChange: (DebutEraFilter) -> Unit,
     crossTierFilter: String = "all",
     onCrossTierChange: (String) -> Unit = {},
+    showMetricSorts: Boolean = true,
     onReset: () -> Unit
 ) {
     val isEn = LanguageManager.isEnglish
@@ -584,7 +585,7 @@ fun StaffFilterBottomSheet(
                 StaffSortOption.NEWEST_DEBUT,
                 StaffSortOption.OLDEST_DEBUT,
                 StaffSortOption.WORKS_COUNT
-            )
+            ) + if (showMetricSorts) listOf(StaffSortOption.EPISODE, StaffSortOption.CONTRIBUTION) else emptyList()
 
             SingleChoiceButtonGroup(
                 options = availableSorts,
@@ -592,6 +593,19 @@ fun StaffFilterBottomSheet(
                 onSelect = { onSortChange(it) },
                 label = { it.getDisplayName(isEn) }
             )
+            if (sortOption.metricKey != null) {
+                Text(
+                    text = if (sortOption == StaffSortOption.EPISODE) {
+                        if (isEn) "Episode Score: how much higher the episodes this person worked on were rated on IMDb than the rest of the series. Only people with 5+ rated episodes. For reference only: it barely predicts later episodes."
+                        else "各話評価: 担当した話が、同じ作品のほかの話より IMDb でどれだけ高く評価されたか。評価のある担当話が5話以上の人だけ。参考値（その後の担当話の評価はほとんど予測できない）"
+                    } else {
+                        if (isEn) "Contribution: the person's own effect on work scores, estimated by ridge regression after removing studio and series effects. Only people with 3+ scored works."
+                        else "個人寄与度: スタジオとシリーズの影響を除いて推定した、その人自身が作品評価に与えた影響（リッジ回帰）。評価のある参加作品が3作品以上の人だけ"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             // 2. もう片方の指標のTier指定 (総合実力順のときは生涯累計実績Tier、生涯累計実績順のときは総合実力Tier)
             val crossTierTitle = if (sortOption == StaffSortOption.CUMULATIVE) {

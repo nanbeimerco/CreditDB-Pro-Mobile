@@ -188,6 +188,27 @@ LEGACY_GENGA_2ND_KEYS = ("genga_second",)
 # API health counters, checked at the end of the run (see check_api_health)
 STATS = defaultdict(int)
 
+# スタッフ欄に入っている会社・グループ（背景美術の会社など）。個人の評価一覧には入れない。
+# 一覧は tools/non_person_names.txt で手管理する（Bangumi の人物種別は個人を会社と誤って付けていることがあるため自動では足さない）。
+# 週次更新で Bangumi から会社・グループとして見つかった名前は、候補として実行レポートに出す。
+NON_PERSON_FILE = Path(__file__).resolve().parent / "non_person_names.txt"
+NON_PERSON_SEEN = set()  # 今回の実行で Bangumi から見つかった会社・グループ（候補）
+
+
+def load_non_person_names(conn) -> set:
+    names = set()
+    if NON_PERSON_FILE.exists():
+        names = {l.strip() for l in NON_PERSON_FILE.read_text(encoding="utf-8").splitlines() if l.strip() and not l.startswith("#")}
+    # アプリが会社名を見分けられるように DB にも入れる
+    conn.execute("DROP TABLE IF EXISTS non_person_names")
+    conn.execute("CREATE TABLE non_person_names (name TEXT PRIMARY KEY)")
+    conn.executemany("INSERT INTO non_person_names VALUES (?)", [(n,) for n in sorted(names)])
+    new = sorted(NON_PERSON_SEEN - names)
+    if new:
+        print(f"  -> 会社・グループの候補（non_person_names.txt に未登録）: {', '.join(new[:30])}")
+        write_step_summary([f"| 会社・グループの候補（未登録） | {', '.join(new[:30])} |"])
+    return names
+
 def sanitize_staff_dict(s_map: dict) -> tuple[dict, bool]:
     """
     Merges 'storyboard' into 'unit_director' without duplicate staff names,
@@ -631,6 +652,8 @@ def fetch_bangumi_staff_and_cast(title_jp: str, subject_id: int = None, year: in
                     r_name = p.get("relation", "").strip()
                     p_name = p.get("name", "").strip()
                     role_key = RELATION_MAP.get(r_name)
+                    if p_name and p.get("type") in (2, 3):
+                        NON_PERSON_SEEN.add(p_name)
                     if role_key and p_name:
                         existing = staff_by_role.setdefault(role_key, [])
                         ex_item = next((x for x in existing if x["name"] == p_name), None)
@@ -745,6 +768,8 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
 
     staff_overall = defaultdict(list)
     staff_by_role = defaultdict(list)
+    non_person = load_non_person_names(conn)
+    skipped_non_person = set()
     rel_weights = {"主角": 1.0, "配角": 0.5, "客串": 0.2, "MAIN": 1.0, "SUPPORTING": 0.5, "BACKGROUND": 0.2}
     sanitized_updates = []
 
@@ -806,6 +831,9 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
                     name = name.strip() if name else ""
                     if not name:
                         continue
+                    if name in non_person:
+                        skipped_non_person.add(name)
+                        continue
                     share, eps = participation(role, n, n_in_role, n_eps)
                     if role in EPISODE_ROLES:
                         ep_total += 1
@@ -836,6 +864,7 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
             except:
                 pass
 
+    print(f"  -> 会社・グループとして個人の集計から除外: {len(skipped_non_person)} 件（一覧 {len(non_person)} 件）")
     if sanitized_updates:
         cur.executemany("UPDATE works SET staff_json = ? WHERE work_id = ?", sanitized_updates)
         conn.commit()
@@ -976,6 +1005,26 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
             first_year, latest_year
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     """, lb_update_batch)
+
+    # --- フェーズ3: 各話評価・個人寄与度と検証 ----------------------------------
+    metric_summary = []
+    try:
+        import new_metrics
+        studio_of = dict(cur.execute("SELECT work_id, studio_name FROM studio_works").fetchall())
+        series_key = {wid: extract_main_title_norm(title or "") for wid, title, *_ in all_works_data}
+        production = {k: v for k, v in staff_by_role.items() if k[0] != "cv"}
+
+        def m_of(role, use_participation):
+            return DEFAULT_ROLE_M.get(role, 6.0) * (m_scale.get(role, 1.0) if use_participation else 1.0)
+
+        print("  -> 新指標（各話評価・個人寄与度）と検証を計算中...")
+        m_rows, v_rows, metric_summary = new_metrics.compute(
+            conn, production, work_zscores, item_years, series_key, studio_of, m_of, tier_fn=calculate_tier)
+        new_metrics.write_tables(conn, m_rows, v_rows)
+        print(f"  -> staff_metrics {len(m_rows)} 行 / 検証 {len(v_rows)} 行")
+    except Exception as e:
+        print(f"::warning::新指標の計算に失敗しました（既存の指標には影響なし）: {e}")
+        metric_summary = [f"| 新指標の計算に失敗 | {e} |"]
 
     # Rebuild profiles
     cur.execute("DELETE FROM profiles;")
@@ -1144,6 +1193,7 @@ def recalculate_all_metrics_and_resolve_tiers(conn):
         cur.executemany("UPDATE works SET staff_json = ?, characters_json = ? WHERE work_id = ?", updates)
         conn.commit()
         print(f"  -> {len(updates)} 作品のスタッフ・キャストTierを更新しました。")
+    return metric_summary
 
 def build_db_lookup_index(cursor):
     """Builds fast lookup indices for matching existing DB works by ID, normalized title, and main title."""
@@ -1240,6 +1290,7 @@ def parse_args():
     p.add_argument("--anilist-store", default=None, help="AniList 話数クレジットの保存先 (anilist_credits.zip)")
     p.add_argument("--anilist-out", default=None, help="更新後の anilist_credits.zip の出力先")
     p.add_argument("--anilist-minutes", type=float, default=25, help="AniList 再取得に使う時間の上限（分）")
+    p.add_argument("--imdb-dir", default=None, help="IMDb のデータの置き場所（指定すると各話評価を更新する。無ければダウンロード）")
     return p.parse_args()
 
 def refresh_anilist_recent(conn, store, current_year: int, minutes: float) -> dict:
@@ -1573,8 +1624,24 @@ def main():
         if args.anilist_out:
             ac.save_store(store, Path(args.anilist_out))
 
+    # Step 3d: IMDb の各話評価（フェーズ2）。失敗しても前回の各話評価を残して続ける
+    if args.imdb_dir:
+        import imdb_episodes
+        try:
+            imdb_episodes.download_imdb(args.imdb_dir)
+            st = imdb_episodes.build_episode_scores(conn, args.imdb_dir)
+            conn.commit()
+            write_step_summary([f"| IMDb 各話評価 | {st['works_with_episode_scores']} 作品・{st['episode_scores']} 話 {st['by_method']} |"])
+        except Exception as e:
+            print(f"::warning::IMDb の各話評価を更新できませんでした（前回の値を使います）: {e}")
+            write_step_summary([f"| IMDb 各話評価 | ⚠️ 更新失敗（前回の値を使用）: {e} |"])
+
     # Step 4: Recalculate all metrics & resolve staff tiers
-    recalculate_all_metrics_and_resolve_tiers(conn)
+    metric_summary = recalculate_all_metrics_and_resolve_tiers(conn)
+    if metric_summary:
+        write_step_summary(["", "### 新指標の検証（2022年までで推定 → 2023年以降の作品Zの予測との相関 r）", "",
+                            "| 役職 | 作品数 | 現行方式 | 参加度の重み付け | 個人寄与度 | 個人寄与度（人だけ） | 正則化 |",
+                            "|---|---|---|---|---|---|---|"] + metric_summary)
 
     print("\n[5/6] サマリー集計 & ZIP 作成中...")
     cursor.execute("SELECT COUNT(*) FROM works")

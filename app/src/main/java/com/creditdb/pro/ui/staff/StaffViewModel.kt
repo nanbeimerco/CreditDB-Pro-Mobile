@@ -61,7 +61,9 @@ class StaffViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onRoleSelect(role: String) {
         if (_uiState.value.selectedRole == role) return
-        _uiState.update { it.copy(selectedRole = role) }
+        // 声優・スタジオには新指標（各話評価・個人寄与度）が無いので、選んでいたら既定の並び順に戻す
+        val keepSort = _uiState.value.sortOption.metricKey == null || role !in setOf("cv", "studio")
+        _uiState.update { it.copy(selectedRole = role, sortOption = if (keepSort) it.sortOption else DEFAULT_STAFF_SORT) }
         fetchLeaderboard(reset = true)
     }
 

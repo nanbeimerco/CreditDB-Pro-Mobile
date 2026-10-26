@@ -60,10 +60,14 @@ fun WorkDetailScreen(
     val repository = remember { CreditRepository.getInstance(context) }
     var workDetail by remember { mutableStateOf<WorkDetail?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var episodeScores by remember { mutableStateOf<List<com.creditdb.pro.data.EpisodeScore>>(emptyList()) }
+    var nonPerson by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(workId) {
         isLoading = true
         workDetail = repository.getWorkDetail(workId)
+        episodeScores = repository.getEpisodeScores(workId)
+        nonPerson = repository.getNonPersonNames()
         isLoading = false
     }
 
@@ -368,6 +372,15 @@ fun WorkDetailScreen(
                 }
                 }
 
+                // 2b. 各話評価（IMDb）
+                if (episodeScores.size >= 2) {
+                    item(key = "episode_scores") {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                            EpisodeScoreCard(scores = episodeScores)
+                        }
+                    }
+                }
+
                 // 3. 制作陣・声優クレジット (Role by Role)
                 item {
                     Column(modifier = Modifier.padding(bottom = 16.dp)) {
@@ -387,7 +400,8 @@ fun WorkDetailScreen(
                             StaffRoleCard(
                                 roleKey = roleKey,
                                 staffList = staffList,
-                                onStaffClick = onStaffClick
+                                onStaffClick = onStaffClick,
+                                nonPerson = nonPerson
                             )
                         }
                         }
@@ -395,6 +409,7 @@ fun WorkDetailScreen(
                 }
 
                 // 3b. 各話スタッフ（AniList の話数付きクレジット）
+                val scoreByEpisode = episodeScores.associateBy { it.episode }
                 if (episodeStaff.isNotEmpty()) {
                     item {
                         Column(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -424,6 +439,7 @@ fun WorkDetailScreen(
                             ep = ep,
                             index = index,
                             count = episodeStaff.size,
+                            score = scoreByEpisode[ep.episode],
                             onStaffClick = onStaffClick,
                             modifier = Modifier.padding(bottom = if (index == episodeStaff.size - 1) 16.dp else 0.dp)
                         )
@@ -519,7 +535,8 @@ fun StaffRoleCard(
     roleKey: String,
     staffList: List<StaffCredit>,
     onStaffClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    nonPerson: Set<String> = emptySet()
 ) {
     var expanded by remember { mutableStateOf(staffList.size <= 5) }
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
@@ -570,12 +587,14 @@ fun StaffRoleCard(
             displayList.forEach { staff ->
                 val displayName = staff.getDisplayName(isEn)
                 val relationTag = staff.relation?.let { com.creditdb.pro.ui.theme.AppStrings.relationCompact(it, isEn) }
+                // 会社・グループ（背景美術の会社など）は個人の評価が無いので、タップできず Tier も出さない
+                val isCompany = staff.name in nonPerson
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(6.dp))
-                        .clickable { onStaffClick(staff.name) }
+                        .then(if (isCompany) Modifier else Modifier.clickable { onStaffClick(staff.name) })
                         .padding(horizontal = 6.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -623,10 +642,24 @@ fun StaffRoleCard(
                         }
                     }
 
-                    DualTierBadge(
-                        ratingTier = staff.ratingTier,
-                        cumulativeTier = staff.cumulativeTier
-                    )
+                    if (isCompany) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Text(
+                                text = if (isEn) "Company" else "会社",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        DualTierBadge(
+                            ratingTier = staff.ratingTier,
+                            cumulativeTier = staff.cumulativeTier
+                        )
+                    }
                 }
             }
 
@@ -654,6 +687,7 @@ private fun EpisodeStaffRow(
     ep: com.creditdb.pro.data.EpisodeStaff,
     index: Int,
     count: Int,
+    score: com.creditdb.pro.data.EpisodeScore? = null,
     onStaffClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -680,6 +714,15 @@ private fun EpisodeStaffRow(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
+                if (score != null) {
+                    Text(
+                        text = "★ " + String.format("%.1f", score.rating),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
                 val ka = ep.keyAnimators.size + ep.secondKeyAnimators.size
                 if (ka > 0) {
                     Text(
@@ -743,6 +786,110 @@ private fun EpisodeStaffRow(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * 各話評価（IMDb）のグラフ。点の大きさは票数。破線は作品の平均。
+ */
+@Composable
+private fun EpisodeScoreCard(scores: List<com.creditdb.pro.data.EpisodeScore>) {
+    val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    val mean = scores.map { it.rating }.average()
+    val best = scores.maxBy { it.rating }
+    val worst = scores.minBy { it.rating }
+    val lineColor = MaterialTheme.colorScheme.primary
+    val meanColor = MaterialTheme.colorScheme.outline
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val maxVotes = scores.maxOf { it.votes }.coerceAtLeast(1)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = if (isEn) "Episode Ratings (IMDb)" else "各話評価（IMDb）",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = if (isEn) {
+                    "${scores.size} episodes · Avg ${String.format("%.2f", mean)} · Best Ep ${best.episode} (${String.format("%.1f", best.rating)}) · Lowest Ep ${worst.episode} (${String.format("%.1f", worst.rating)})"
+                } else {
+                    "${scores.size}話 · 平均 ${String.format("%.2f", mean)} · 最高 第${best.episode}話（${String.format("%.1f", best.rating)}） · 最低 第${worst.episode}話（${String.format("%.1f", worst.rating)}）"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val lo = (scores.minOf { it.rating } - 0.3).coerceAtLeast(0.0)
+            val hi = (scores.maxOf { it.rating } + 0.3).coerceAtMost(10.0)
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                val padX = 8.dp.toPx()
+                val padY = 8.dp.toPx()
+                val w = size.width - padX * 2
+                val h = size.height - padY * 2
+                val firstEp = scores.first().episode
+                val lastEp = scores.last().episode
+                fun x(ep: Int) = padX + if (lastEp == firstEp) w / 2 else w * (ep - firstEp) / (lastEp - firstEp).toFloat()
+                fun y(r: Double) = padY + h * (1f - ((r - lo) / (hi - lo)).toFloat())
+                // 目盛り（整数の評価）
+                var tick = kotlin.math.ceil(lo)
+                while (tick <= hi) {
+                    drawLine(gridColor, androidx.compose.ui.geometry.Offset(padX, y(tick)), androidx.compose.ui.geometry.Offset(padX + w, y(tick)), strokeWidth = 1f)
+                    tick += 1.0
+                }
+                drawLine(
+                    meanColor,
+                    androidx.compose.ui.geometry.Offset(padX, y(mean)),
+                    androidx.compose.ui.geometry.Offset(padX + w, y(mean)),
+                    strokeWidth = 2f,
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+                )
+                val path = androidx.compose.ui.graphics.Path()
+                scores.forEachIndexed { i, s ->
+                    if (i == 0) path.moveTo(x(s.episode), y(s.rating)) else path.lineTo(x(s.episode), y(s.rating))
+                }
+                drawPath(path, lineColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f))
+                scores.forEach { s ->
+                    val r = 2.5.dp.toPx() + 3.dp.toPx() * kotlin.math.sqrt(s.votes / maxVotes.toFloat())
+                    drawCircle(lineColor, radius = r, center = androidx.compose.ui.geometry.Offset(x(s.episode), y(s.rating)))
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    text = if (isEn) "Ep ${scores.first().episode}" else "第${scores.first().episode}話",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (isEn) "Dashed line: average" else "破線: 平均",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (isEn) "Ep ${scores.last().episode}" else "第${scores.last().episode}話",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // IMDb の利用条件による表記
+            Text(
+                text = "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
         }
     }
 }

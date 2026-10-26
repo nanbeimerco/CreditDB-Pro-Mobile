@@ -44,6 +44,70 @@ class CreditRepository(private val context: Context) {
     private var workIdToTitleEnCache: Map<String, String>? = null
     private var titleToTitleEnCache: Map<String, String>? = null
 
+    // DB に新しいテーブル（staff_metrics など）があるか。古い DB では無いので、そのときは使わない
+    private val tableExistsCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    private fun hasTable(db: android.database.sqlite.SQLiteDatabase, name: String): Boolean =
+        tableExistsCache.getOrPut(name) {
+            db.rawQuery("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", arrayOf(name)).use { it.moveToFirst() }
+        }
+
+    /** スタッフの新指標（各話評価・個人寄与度）。役職ごと */
+    suspend fun getStaffMetrics(staffName: String): List<StaffMetric> = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        if (!hasTable(db, "staff_metrics")) return@withContext emptyList()
+        db.rawQuery(
+            "SELECT role, metric, value, n, rank, total, tier FROM staff_metrics WHERE name = ?",
+            arrayOf(staffName)
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(StaffMetric(c.getString(0), c.getString(1), c.getDouble(2), c.getInt(3), c.getInt(4), c.getInt(5), c.getString(6)))
+                }
+            }
+        }
+    }
+
+    /** 作品の各話評価（IMDb） */
+    suspend fun getEpisodeScores(workId: String): List<EpisodeScore> = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        if (!hasTable(db, "episode_scores")) return@withContext emptyList()
+        db.rawQuery(
+            "SELECT episode, rating, votes FROM episode_scores WHERE work_id = ? AND source = 'imdb' AND episode >= 1 ORDER BY episode",
+            arrayOf(workId)
+        ).use { c ->
+            buildList { while (c.moveToNext()) add(EpisodeScore(c.getInt(0), c.getDouble(1), c.getInt(2))) }
+        }
+    }
+
+    /** 新指標の検証結果（2022年までで推定 → 2023年以降を予測したときの相関） */
+    suspend fun getMetricValidation(): List<MetricValidation> = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        if (!hasTable(db, "metric_validation")) return@withContext emptyList()
+        db.rawQuery("SELECT role, method, pearson, n FROM metric_validation", null).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(MetricValidation(c.getString(0), c.getString(1), if (c.isNull(2)) null else c.getDouble(2), c.getInt(3)))
+                }
+            }
+        }
+    }
+
+    // 会社・グループ（背景美術の会社など）。個人の評価一覧には入っていない
+    @Volatile private var nonPersonCache: Set<String>? = null
+
+    suspend fun getNonPersonNames(): Set<String> = withContext(Dispatchers.IO) {
+        nonPersonCache?.let { return@withContext it }
+        val db = dbHelper.readableDatabase
+        val set = if (hasTable(db, "non_person_names")) {
+            db.rawQuery("SELECT name FROM non_person_names", null).use { c ->
+                buildSet { while (c.moveToNext()) add(c.getString(0)) }
+            }
+        } else emptySet()
+        nonPersonCache = set
+        set
+    }
+
     private fun getWorkTitleEnMaps(db: android.database.sqlite.SQLiteDatabase): Pair<Map<String, String>, Map<String, String>> {
         val idMap = workIdToTitleEnCache
         val titleMap = titleToTitleEnCache
@@ -551,8 +615,22 @@ class CreditRepository(private val context: Context) {
             }
         }
 
+        // 新指標（各話評価・個人寄与度）で並べる場合は、値のある人だけを対象にする
+        val metric = sortOption.metricKey?.takeIf { role != "cv" && hasTable(db, "staff_metrics") }
+        if (metric != null) {
+            conditions.add("EXISTS (SELECT 1 FROM staff_metrics m WHERE m.name = leaderboards.name AND m.role = leaderboards.role AND m.metric = '$metric')")
+        }
+        val metricCols = if (metric != null) {
+            listOf("value", "rank", "tier").joinToString(", ") {
+                "(SELECT m.$it FROM staff_metrics m WHERE m.name = leaderboards.name AND m.role = leaderboards.role AND m.metric = '$metric')"
+            }
+        } else "NULL, NULL, NULL"
+
         val whereClause = "WHERE " + conditions.joinToString(" AND ")
-        val orderClause = when (sortOption) {
+        val orderClause = if (metric != null) {
+            "ORDER BY (SELECT m.rank FROM staff_metrics m WHERE m.name = leaderboards.name AND m.role = leaderboards.role AND m.metric = '$metric') ASC"
+        } else when (sortOption) {
+            StaffSortOption.EPISODE, StaffSortOption.CONTRIBUTION -> "ORDER BY rating_rank ASC"
             StaffSortOption.RATING -> "ORDER BY rating_rank ASC"
             StaffSortOption.CUMULATIVE -> "ORDER BY cumulative_rank ASC"
             StaffSortOption.NEWEST_DEBUT -> "ORDER BY CASE WHEN first_year IS NULL THEN 1 ELSE 0 END, first_year DESC, rating_rank ASC"
@@ -564,7 +642,7 @@ class CreditRepository(private val context: Context) {
             SELECT role, name, works_count, bayesian_rating, career_cumulative_z,
                    rating_rank, cumulative_rank, rating_tier, cumulative_tier,
                    best_work_title, best_work_year, best_work_z, top_character,
-                   first_year, latest_year
+                   first_year, latest_year, $metricCols
             FROM leaderboards $whereClause $orderClause LIMIT ? OFFSET ?
         """.trimIndent()
         args.add(limit.toString())
@@ -591,7 +669,10 @@ class CreditRepository(private val context: Context) {
                     bestWorkZ = cursor.getDouble(11).takeIf { !cursor.isNull(11) },
                     topCharacter = cursor.getString(12)?.takeIf { it.isNotBlank() },
                     firstYear = cursor.getInt(13).takeIf { !cursor.isNull(13) && it > 0 },
-                    latestYear = cursor.getInt(14).takeIf { !cursor.isNull(14) && it > 0 }
+                    latestYear = cursor.getInt(14).takeIf { !cursor.isNull(14) && it > 0 },
+                    metricValue = if (cursor.isNull(15)) null else cursor.getDouble(15),
+                    metricRank = if (cursor.isNull(16)) null else cursor.getInt(16),
+                    metricTier = if (cursor.isNull(17)) null else cursor.getString(17)
                 )
             )
         }
@@ -692,7 +773,11 @@ class CreditRepository(private val context: Context) {
         }
 
         val whereClause = "WHERE " + conditions.joinToString(" AND ")
-        val cursor = db.rawQuery("SELECT count(*) FROM leaderboards $whereClause", args.toTypedArray())
+        val metric = sortOption.metricKey?.takeIf { role != "cv" && hasTable(db, "staff_metrics") }
+        val metricWhere = if (metric != null) {
+            " AND EXISTS (SELECT 1 FROM staff_metrics m WHERE m.name = leaderboards.name AND m.role = leaderboards.role AND m.metric = '$metric')"
+        } else ""
+        val cursor = db.rawQuery("SELECT count(*) FROM leaderboards $whereClause$metricWhere", args.toTypedArray())
         var count = 0
         if (cursor.moveToFirst()) {
             count = cursor.getInt(0)
@@ -1290,6 +1375,8 @@ class CreditRepository(private val context: Context) {
                 cachedSummary = null // キャッシュ破棄
                 workIdToTitleEnCache = null
                 titleToTitleEnCache = null
+                tableExistsCache.clear()
+                nonPersonCache = null
                 com.creditdb.pro.data.tier.WorkImageResolver.invalidate()
                 onProgress(95, "新しいデータベースへ再接続中...")
                 val newSummary = getSummary()

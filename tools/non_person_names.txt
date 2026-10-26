@@ -1,0 +1,518 @@
+# スタッフ欄に入っている会社・グループの名前（個人の評価一覧から除外する）。1行に1つ。
+# tools/seed_company_names.py が Bangumi の人物種別（会社・グループ）から作成し、会社名らしい語を含む名前を追加、誤判定（個人）を手で除いたもの。手で追加・削除してよい。
+20th Century Fox Animation
+A-1 Pictures
+A-Real
+A.P.P.P.
+ACCプロダクション
+AIC
+ANANT-GARDE EYES
+AQUA ARIS
+ARMS
+ARTE MUKUO
+ARTLAND
+ASK ANIMATION STUDIO
+AXsiZ
+Acca effe
+Arte Refact
+Atelier
+Atelier Giga
+Atelier Gokujou
+Atelier Pontdarc
+Audio Highs
+Aプロダクション
+A・C・G・T
+BAKKEN RECORD
+BMF
+Bamboo
+BeeTrain
+Boundary
+Brain's Base
+C-Station
+C2C
+CMC MEDIA
+CONNECT
+Cartoon Network Studios
+Children's Playground Entertainment
+Choro Club
+CloverWorks
+CoMix Wave Films
+Colored Pencil Animation Japan
+Craft Egg
+Creative Freaks
+Creators in Pack
+DMM.futureworks
+DehoGallery
+Disney Television Animation
+DreamWorks Animation
+E&H production
+EKACHI EPILKA
+EMTスクエアード
+ENGI
+ENISHIYA
+Elements Garden
+Ellipse Animation
+FelixFilm
+FiFS
+GAINAX
+GEEKTOYS
+GEMBA
+GONZO
+Gaumont Animation
+GoHands
+Grantray-Lawrence Animation
+HANJIN ANIMATION
+HORNETS
+Hal Film Maker
+Hanil
+HoneyWorks
+IMAGICA Lab.
+J.C.STAFF
+JAM Project
+KINEMA CITRUS
+LARX ENTERTAINMENT
+Lotus Animation
+Lucasfilm Animation
+MADHOUSE
+MAGES.
+MAHO FILM
+MAPPA
+MARU ANIMATION
+MGM Animation/Visual Arts
+MONACA
+MOSAIC.WAV
+Mabus Animation
+Manglobe
+Marvel Animation
+Metro-Goldwyn-Mayer cartoon studio
+Mikros Animation
+Mook Animation
+NAM HAI ART
+NAMU Animation
+NARA Animation
+NAS
+NAZ
+NHK
+NUT
+Nexus
+Nippon Animation
+Noovo Inc.
+OH!プロダクション
+OLM
+P.A.WORKS
+PEACH-PIT
+PINE JAM
+PMMK
+POLY ANIMATION
+Paramount Animation
+Pie in the sky
+Point Pictures
+Production +h.
+Production I.G
+QP:flapper
+RADIX MOBANIMATION
+REVOROOT
+Red Dog Culture House
+Rooster Teeth Productions
+S.E.N.S. Project
+SHAFT
+SILVER LINK.
+SMDE
+ST.BLUE
+STUDIO
+STUDIO 4℃
+STUDIO 88
+STUDIO CL
+STUDIO EEK
+STUDIO JEMI
+STUDIO MASSKET
+STUDIO POLON
+STUDIO SHELTER
+STUDIO.LAN！
+STUDIOH4
+STUDIOKAI
+STUDIO竜M’ｓ
+Seven Arcs
+Shin-Ei Animation
+Skydance Animation
+Sony Pictures Animation
+Story Riders
+Studio
+Studio 3Hz
+Studio Animal
+Studio BEN
+Studio Blanc.
+Studio Bulldog
+Studio Bus
+Studio Comet
+Studio DURIAN
+Studio DaDaShow
+Studio Fusion
+Studio Gallop
+Studio Giants
+Studio Jiřího Trnky
+Studio Joho
+Studio Junio
+Studio Khronos
+Studio Kikan
+Studio La Cachette
+Studio MIR
+Studio N
+Studio Nue
+Studio Outrigger
+Studio Signal
+Studio Unicorn
+Studio Zero
+Studio!cucuri
+StudioGOONEYS
+StudioXD
+Studio五組
+Studio無限
+Sunflowers
+SynergySP
+TCJ
+TEATRO西東京スタジオ
+TOHO animation STUDIO
+TROYCA
+Telecom Animation Film
+The One Studio
+TriFスタジオ
+Vanguard Sound
+WHITE FOX
+WIT STUDIO
+Warner Bros. Animation
+Warner Bros. Pictures Animation
+Warner Bros.-Seven Arts Animation
+Warsaw Philharmonic Orchestra
+Wish
+XEBEC
+Yapiko Animation
+ZEXCS
+ZIZZ STUDIO
+david production
+diomedéa
+drop
+dwarf studios
+feel.
+fox capture plan
+khara
+pHスタジオ
+project No.9
+reboot
+st.シルバー
+studio
+studio A-CAT
+studio CANDYBOX
+studio FLAG
+studio HōKIBOSHI
+studio MOTHER
+studio Pablo
+studio daisy
+studio hb
+studio maf
+studio2
+studio9MAiami
+studioぱれっと
+ufotable
+うぐいす工房
+きのプロダクション
+ぎふとアニメーション
+ぎゃろっぷ
+じゃんぐるじむ
+つむぎ秋田アニメLab
+ととにゃん
+ぴえろ
+ゆめ太カンパニー
+ゆめ太カンパニー（旧）
+アイムーヴ
+アカツキメディアスタジオ
+アクアプラス
+アクタス
+アスリード
+アトリエPlatz
+アトリエムサ
+アトリエローク07
+アニメイトフィルム
+アニメ工房婆娑羅
+アルボアニメーション
+アンサー・スタジオ
+アートミック
+イマジカインフォス
+イマジン
+イーストフィッシュスタジオ
+エイケン
+エイトビット
+エクラアニマル
+エコーアニメーション
+エピクロス株式会社
+エム・エス・シー
+オクルトノボル
+オレンジ
+オーディオ・ハイズ
+オーラスタジオ
+カナメプロダクション
+カヤックアニメーション
+ガンジス
+キティ・フィルム
+キューン・プラント
+キョクイチ東京ムービー
+グルーパープロダクション
+グループ・タック
+ケイエスエス
+ケイファクトリー
+コスモプロジェクト
+サイエンスSARU
+サイピク
+サテライト
+サブリメイション
+サンジゲン
+サンライズ
+シンエイ動画
+ジェノスタジオ
+ジェンコ
+スクウェア・エニックス イメージ・スタジオ
+スタジオ KLAS
+スタジオ サインポスト
+スタジオ フラッド
+スタジオ1st
+スタジオDOT
+スタジオG-1NEO
+スタジオKAI
+スタジオM2
+スタジオMAT
+スタジオOX
+スタジオWHO
+スタジオごはん
+スタジオじゃっく
+スタジオたくらんけ
+スタジオちゅーりっぷ
+スタジオななほし
+スタジオぴえろ
+スタジオぷYUKAI
+スタジオへらくれす
+スタジオイゼナ
+スタジオエイトカラーズ
+スタジオエル
+スタジオカノン
+スタジオカフカ
+スタジオガッツ
+スタジオグラム
+スタジオケルマディック
+スタジオコスモス
+スタジオコメット
+スタジオコロリド
+スタジオジブリ
+スタジオジャム
+スタジオジュニオ
+スタジオディーン
+スタジオドット
+スタジオバインド
+スタジオパインウッド
+スタジオパストラル
+スタジオピーコック
+スタジオポノック
+スタジオマトリックス
+スタジオモリコーネ
+スタジオライブ
+スタジオラグラス
+スタジオリングス
+スタジオレオ
+スタジオロン
+スタジオワイエス
+スタジオワンパック
+スタジオヴォルン
+スタジオ・アァンタジア
+スタジオ・イースター
+スタジオ・ザイン
+スタジオ・ゼロ
+スタジオ・ファンタジア
+スタジオ・ユニ
+スタジオ・ルーファス
+スタジオ九魔
+スタジオ六花
+スタジオ古留美
+スタジオ地図
+スタジオ天神
+スタジオ座円洞
+スタジオ春となり
+スタジオ雲雀
+スタジオ風雅
+スタジオＺ
+セブン
+ゼロジー
+ソワネ
+タカハシスタジオ
+タツノコプロ
+タマ・プロダクション
+ダックスプロダクション
+ダブトゥーンスタジオ
+ダンガンピクチャーズ
+チップチューン
+チーム・ティルドーン
+ティアスタジオ
+ティー・エヌ・ケー
+テレビ朝日
+トムス・エンタテインメント
+トライアングルスタッフ
+トラッシュスタジオ
+ドメリカ
+ドライブ
+ナイノア
+ノーマッド
+ハヤシ株式会社
+ハヤブサフィルム
+バイブリーアニメーションスタジオ
+バンダイナムコエンターテインメント
+バンダイナムコスタジオ
+パッショーネ
+ビーボォー
+ピクチャーマジック
+ピー・プロダクション
+フジテレビ
+ブリッジ
+プラチナビジョン
+プラム
+プロダクションアイムズ
+プロダクション・アイ
+ベガエンタテイメント
+ポリゴン・ピクチュアズ
+マウス
+マジックバス
+マニュアル・オブ・エラーズ
+マーヴィージャック
+ムークアニメーション
+モンスターズエッグ
+ラパントラック
+ランティス
+ランドック・スタジオ
+リップルフィルム
+レスプリ
+七灵石
+万维猫动画
+上海M.C.C
+上海樊特姆动画
+上海美术电影制片厂
+两点十分动漫
+中村プロダクション
+中野アニメーション
+九五万象
+云图动漫
+亜細亜堂
+京都アニメーション
+什悦文化
+伊恩动漫
+元气蛙动漫
+円谷プロダクション
+凝羽动画
+刃-yaiba-
+分子互动
+初色动画
+創通
+動画工房
+勝鬨スタジオ
+十尾动画
+华映星球
+原创动力
+原力动画
+友诺
+叽咔
+咕咚动漫工作室
+品界文化
+啦比豆豆
+四次方动画
+土田プロダクション
+声影动漫
+大火鸟文化
+天狗工房
+央视动漫集团
+奥飞娱乐
+好传动画
+娃娃鱼动画
+寒木春华
+小倉工房
+小学館集英社プロダクション
+小旭音乐
+小林プロダクション
+小疯映画
+幻想动漫音乐
+彩条屋
+彩色铅笔动画
+徳間ジャパンコミュニケーションズ
+戯画プロダクション
+手塚プロダクション
+方块动漫画
+方特动漫
+日動映画株式会社
+日影工房
+日本アニメーション
+日本コロムビア
+日本テレビ
+日本テレビ動画
+旭プロダクション
+易动文化
+星山企画
+有限会社クワイア
+杭州路行动画设计有限公司
+東京アニメーションセンター
+東京ムービー
+東京ムービー新社
+東北新社
+東堂いづみ
+東映アニメーション
+株式会社
+株式会社タカラ
+株式会社マジックバス
+梦卜动漫
+横浜アニメーションラボ
+武遊
+江通动画
+洛水花原
+淘米网络
+灵叁伍动画
+灵樨文化
+獏プロダクション
+玄机科技
+画枚动画
+白組
+知行合一动漫
+石垣プロダクション
+神南スタジオ
+神漫文化
+神龍
+福煦影视
+立羽文化
+竜美堂
+童夢
+索以文化
+纸飞机动画
+绘之刃
+绘梦想动漫
+绿怪研
+美峰
+舞之动画
+艺画开天
+艾尔平方
+若鸿文化
+草薙
+葦プロダクション
+藤子不二雄
+虫プロダクション
+视美影业
+読売広告社
+谛听文化
+豪勢スタジオ
+超神影业
+辅乐文化
+辉煌动画
+追光动画
+追鲸文化
+金松林动画
+铅元素动画
+電通
+青写真
+青青树
+颱風グラフィックス
+魅力动画
+魔人
+鱼肚白文化
+鳳工房

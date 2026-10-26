@@ -246,7 +246,11 @@ data class LeaderboardItem(
     val topCharacter: String? = null,
     val bestWorkTitleEn: String? = null,
     val firstYear: Int? = null,
-    val latestYear: Int? = null
+    val latestYear: Int? = null,
+    /** 新指標で並べたときの値・順位・Tier（各話評価 / 個人寄与度） */
+    val metricValue: Double? = null,
+    val metricRank: Int? = null,
+    val metricTier: String? = null
 ) {
     fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String {
         return if (role == "studio") {
@@ -428,7 +432,17 @@ enum class StaffSortOption(val label: String) {
     CUMULATIVE("生涯累積実績 ΣZ 順"),
     NEWEST_DEBUT("初参加年 (新しい順)"),
     OLDEST_DEBUT("初参加年 (古い順)"),
-    WORKS_COUNT("参加作品数 (多い順)");
+    WORKS_COUNT("参加作品数 (多い順)"),
+    EPISODE("各話評価 順"),
+    CONTRIBUTION("個人寄与度 順");
+
+    /** 新指標（staff_metrics テーブル）で並べる場合の metric 名 */
+    val metricKey: String?
+        get() = when (this) {
+            EPISODE -> "episode"
+            CONTRIBUTION -> "contribution"
+            else -> null
+        }
 
     fun getDisplayName(isEn: Boolean = com.creditdb.pro.ui.theme.LanguageManager.isEnglish): String {
         return if (isEn) {
@@ -438,6 +452,8 @@ enum class StaffSortOption(val label: String) {
                 NEWEST_DEBUT -> "Debut Year (Newest)"
                 OLDEST_DEBUT -> "Debut Year (Oldest)"
                 WORKS_COUNT -> "Works Count"
+                EPISODE -> "Episode Score"
+                CONTRIBUTION -> "Contribution"
             }
         } else {
             label
@@ -598,3 +614,20 @@ fun buildEpisodeStaff(staffByRole: Map<String, List<StaffCredit>>): List<Episode
         EpisodeStaff(e, ud[e].orEmpty(), ad[e].orEmpty(), ka[e].orEmpty(), ka2[e].orEmpty())
     }
 }
+
+/** 新指標（staff_metrics）。metric = "episode"（各話評価）/ "contribution"（個人寄与度） */
+data class StaffMetric(
+    val role: String,
+    val metric: String,
+    val value: Double,
+    val n: Int,
+    val rank: Int,
+    val total: Int,
+    val tier: String
+)
+
+/** 各話評価（IMDb） */
+data class EpisodeScore(val episode: Int, val rating: Double, val votes: Int)
+
+/** 新指標の検証結果。method = current / participation / contribution / contribution_people / episode */
+data class MetricValidation(val role: String, val method: String, val pearson: Double?, val n: Int)

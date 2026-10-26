@@ -216,6 +216,7 @@ fun StaffScreen(
             onDebutEraChange = viewModel::onDebutEraSelect,
             crossTierFilter = uiState.crossTierFilter,
             onCrossTierChange = viewModel::onCrossTierSelect,
+            showMetricSorts = uiState.selectedRole !in setOf("cv", "studio"),
             onReset = viewModel::resetFilters
         )
     }
@@ -232,7 +233,11 @@ fun CompactStaffCard(
     modifier: Modifier = Modifier
 ) {
     val isStudio = item.role == "studio"
-    val rank = if (sortOption == StaffSortOption.RATING) item.ratingRank else item.cumulativeRank
+    val rank = when {
+        sortOption.metricKey != null -> item.metricRank ?: item.ratingRank
+        sortOption == StaffSortOption.RATING -> item.ratingRank
+        else -> item.cumulativeRank
+    }
     val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
 
     Card(
@@ -376,7 +381,9 @@ fun CompactStaffCard(
                     )
                 }
             } else {
+                val isMetricSort = sortOption.metricKey != null
                 val isRatingSort = sortOption == StaffSortOption.RATING
+                val isCumSort = !isRatingSort && !isMetricSort
                 val ratingSpec = TierTheme.forTier(item.ratingTier)
                 val cumSpec = TierTheme.forTier(item.cumulativeTier)
 
@@ -384,6 +391,26 @@ fun CompactStaffCard(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    // 新指標（各話評価・個人寄与度）で並べているときは、その値を先頭に出す
+                    if (isMetricSort && item.metricValue != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = if (sortOption == StaffSortOption.EPISODE) (if (isEn) "🎯Episode" else "🎯各話") else (if (isEn) "🎯Contrib" else "🎯寄与"),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = String.format("%+.3f", item.metricValue),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TierTheme.forTier(item.metricTier ?: "B").accent
+                            )
+                        }
+                    }
                     // 実力 S(a)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -409,15 +436,15 @@ fun CompactStaffCard(
                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            text = if (isEn) (if (!isRatingSort) "🏛️Cumul" else "Cumul") else (if (!isRatingSort) "🏛️累計" else "累計"),
+                            text = if (isEn) (if (isCumSort) "🏛️Cumul" else "Cumul") else (if (isCumSort) "🏛️累計" else "累計"),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            fontWeight = if (!isRatingSort) FontWeight.Bold else FontWeight.Normal,
-                            color = if (!isRatingSort) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = if (isCumSort) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCumSort) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = String.format("%+.2f", item.cumulativeZ),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (!isRatingSort) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            fontWeight = if (isCumSort) FontWeight.ExtraBold else FontWeight.SemiBold,
                             color = cumSpec.accent
                         )
                     }

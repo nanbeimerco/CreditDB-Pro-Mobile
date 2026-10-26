@@ -55,10 +55,12 @@ fun StaffDetailScreen(
     var profile by remember { mutableStateOf<StaffProfile?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var showAdvancedRoleStats by remember { mutableStateOf(false) }
+    var metrics by remember { mutableStateOf<List<com.creditdb.pro.data.StaffMetric>>(emptyList()) }
 
     LaunchedEffect(staffName) {
         isLoading = true
         profile = repository.getStaffProfile(staffName)
+        metrics = repository.getStaffMetrics(profile?.name ?: staffName)
         isLoading = false
     }
 
@@ -253,6 +255,60 @@ fun StaffDetailScreen(
                 }
                 }
 
+                // 2b. 新しい指標（各話評価・個人寄与度）。既存の2指標と並べて表示する
+                val allMetrics = metrics.filter { it.role == "all" }.associateBy { it.metric }
+                if (!isCv && allMetrics.isNotEmpty()) {
+                    item(key = "new_metrics") {
+                        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.large,
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(
+                                        text = if (isEn) "New Metrics (for reference)" else "新しい指標（参考）",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        NewMetricCell(
+                                            label = if (isEn) "🎬 Episode Score" else "🎬 各話評価",
+                                            metric = allMetrics["episode"],
+                                            countText = { n -> if (isEn) "$n episodes" else "${n}話" },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        NewMetricCell(
+                                            label = if (isEn) "🧮 Contribution" else "🧮 個人寄与度",
+                                            metric = allMetrics["contribution"],
+                                            countText = { n -> if (isEn) "$n works" else "${n}作品" },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    Text(
+                                        text = if (isEn) {
+                                            "Episode Score: how much higher this person's episodes were rated on IMDb than the rest of each series. Contribution: their own effect on work scores, with studio and series effects removed (ridge regression). See the Guide for how well each one predicts."
+                                        } else {
+                                            "各話評価: 担当した話が、同じ作品のほかの話より IMDb でどれだけ高く評価されたか。個人寄与度: スタジオとシリーズの影響を除いた、その人自身が作品評価に与えた影響（リッジ回帰）。どれだけ当たるかはガイドを参照"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 3. 部門別実績セクション
                 if (prof.allRoleStats.isNotEmpty()) {
                     item {
@@ -407,6 +463,31 @@ fun StaffDetailScreen(
                                                 }
                                             }
                                         }
+                                        val roleMetrics = metrics.filter { it.role == stat.role }.associateBy { it.metric }
+                                        if (roleMetrics.isNotEmpty()) {
+                                            AnimatedVisibility(
+                                                visible = showAdvancedRoleStats,
+                                                enter = fadeIn() + expandVertically(),
+                                                exit = fadeOut() + shrinkVertically()
+                                            ) {
+                                                Text(
+                                                    text = listOfNotNull(
+                                                        roleMetrics["episode"]?.let { m ->
+                                                            (if (isEn) "Episode " else "各話 ") + String.format("%+.3f", m.value) + (if (isEn) " #${m.rank}" else " #${m.rank} 位")
+                                                        },
+                                                        roleMetrics["contribution"]?.let { m ->
+                                                            (if (isEn) "Contrib " else "寄与 ") + String.format("%+.3f", m.value) + (if (isEn) " #${m.rank}" else " #${m.rank} 位")
+                                                        }
+                                                    ).joinToString("  •  "),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(top = 2.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -543,6 +624,43 @@ fun StaffDetailScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/** 新指標の1マス（値・順位・対象数）。値が無い人は「データ不足」 */
+@Composable
+private fun NewMetricCell(
+    label: String,
+    metric: com.creditdb.pro.data.StaffMetric?,
+    countText: (Int) -> String,
+    modifier: Modifier = Modifier
+) {
+    val isEn = com.creditdb.pro.ui.theme.LanguageManager.isEnglish
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (metric == null) {
+            Text(
+                text = if (isEn) "Not enough data" else "データ不足",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                text = String.format("%+.3f", metric.value),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = TierTheme.forTier(metric.tier).accent
+            )
+            Text(
+                text = (if (isEn) "#${metric.rank} of ${metric.total}" else "${metric.total}人中 #${metric.rank} 位") + " · " + countText(metric.n),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

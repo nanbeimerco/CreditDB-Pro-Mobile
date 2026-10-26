@@ -388,17 +388,22 @@ object AppStrings {
         if (isEn) "Source for detailed Japanese animation production staff credits (directors, series composition, character designers, animation directors, key animators, art directors, sound, music, and voice cast)."
         else "日本国内アニメーションの詳細な制作陣クレジット（監督、シリーズ構成、キャラクターデザイン、演出、作画監督、原画、美術、音楽、キャスト声優等の階層クレジットデータ）の提供元。"
 
+    fun imdbTitle(isEn: Boolean) = "IMDb Non-Commercial Datasets"
+    fun imdbRole(isEn: Boolean) =
+        if (isEn) "Source for episode ratings (Episode Ratings on work pages and the Episode Score metric). Works are matched to IMDb series through Wikidata (AniList ID → IMDb ID) and title + year. Information courtesy of IMDb (https://www.imdb.com). Used with permission."
+        else "各話評価（作品詳細の各話評価グラフ・各話評価の指標）の提供元。作品と IMDb の対応は Wikidata（AniList ID → IMDb ID）とタイトル・放送年で照合しています。Information courtesy of IMDb (https://www.imdb.com). Used with permission."
+
     fun creditAcknowledgement(isEn: Boolean) =
         if (isEn) "We express our deepest gratitude to AniList and Bangumi, their developer communities, and the global contributors who continuously maintain these invaluable open databases for anime culture."
         else "膨大なアニメーション文化の記録をオープンなデータベース・APIとして公開・維持されている AniList および Bangumi の運営陣ならびにコントリビューターの皆様に深く敬意と感謝を表します。"
 
     fun workDetailDataFooter(isEn: Boolean) =
-        if (isEn) "Data: AniList API (Metadata, Scores & Episode Credits) · Bangumi API (Credits)"
-        else "データ提供: AniList API（作品情報・海外評価・話数付きクレジット） · Bangumi API（制作クレジット）"
+        if (isEn) "Data: AniList API (Metadata, Scores & Episode Credits) · Bangumi API (Credits) · IMDb (Episode Ratings)"
+        else "データ提供: AniList API（作品情報・海外評価・話数付きクレジット） · Bangumi API（制作クレジット） · IMDb（各話評価）"
 
     fun datasetAttribution(isEn: Boolean) =
-        if (isEn) "Dataset: AniList API & Bangumi API"
-        else "データ提供: AniList API · Bangumi API"
+        if (isEn) "Dataset: AniList API, Bangumi API & IMDb"
+        else "データ提供: AniList API · Bangumi API · IMDb"
 
     private fun String.capitalizeWords(): String =
         split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }

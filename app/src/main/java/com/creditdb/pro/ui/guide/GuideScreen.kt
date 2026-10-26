@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,13 @@ fun GuideScreen(
     modifier: Modifier = Modifier
 ) {
     val isEn = LanguageManager.isEnglish
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var validation by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<List<com.creditdb.pro.data.MetricValidation>>(emptyList())
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        validation = com.creditdb.pro.data.CreditRepository.getInstance(context).getMetricValidation()
+    }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val isScrolled by remember {
         androidx.compose.runtime.derivedStateOf {
@@ -643,11 +651,58 @@ fun GuideScreen(
             }
 
             // ==========================================
-            // 第7章: データソースとAPIクレジット
+            // 第7章: 新しい指標（各話評価・個人寄与度）と検証
             // ==========================================
             item {
                 GuideSectionHeader(
                     number = "7",
+                    title = if (isEn) "New Metrics & How Well They Predict" else "新しい指標と、その当たり具合"
+                )
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = if (isEn) {
+                            "Two new metrics are shown next to Power Score S(a) and Cumulative ΣZ. They do not replace them.\n\n" +
+                                "• Episode Score: for each episode rated on IMDb, how far it is from the series average (in standard deviations), minus the usual bias of its position (first and last episodes tend to rate higher). Episodes with few votes count less (v / (v + 20)), and key animators are diluted by the number of key animators on that episode.\n\n" +
+                                "• Contribution: work score (era-adjusted Z) ≈ studio effect + series effect + Σ(share × personal effect), fitted by ridge regression. The personal effect is what remains after removing studio and series popularity and co-workers. For All Staff it is the average push per work (personal effect × share).\n\n" +
+                                "Participation weighting (√(episodes worked / total episodes)) is already used in S(a) and ΣZ."
+                        } else {
+                            "総合実力 S(a)・生涯累計実績 ΣZ に並べて、2つの指標を表示しています（置き換えるものではありません）。\n\n" +
+                                "• 各話評価: IMDb で評価のある各話について、作品の平均から何標準偏差離れているかを出し、話の位置による偏り（第1話・最終話は高く出やすい等）を差し引いたもの。票の少ない話は軽く（v / (v + 20)）、原画はその話の原画の人数で薄めます。\n\n" +
+                                "• 個人寄与度: 作品Z（時代補正済み）≈ スタジオ効果 + シリーズ効果 + Σ(参加の割合 × 個人の効果) をリッジ回帰で推定した「個人の効果」。スタジオ・シリーズの人気や共演者の実力に便乗した分を除いた値です。全スタッフでは、1作品あたりに作品Zを押し上げた量（個人の効果 × 参加の割合）です。\n\n" +
+                                "参加話数による重み付け（√(担当話数 / 全話数)）は、総合実力・累計実績の計算にすでに入っています。"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (isEn) {
+                            "Validation: fitted on works up to 2022, then used to predict the score (Z) of works from 2023 on, from their staff. Higher r is better."
+                        } else {
+                            "検証: 2022年までの作品で推定し、2023年以降の作品の評価（Z）をスタッフ構成から予測したときの相関 r（大きいほど当たる）。"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (validation.isEmpty()) {
+                        Text(
+                            text = if (isEn) "Validation results appear after the database is updated." else "検証結果は、DB を更新すると表示されます。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        ValidationTable(validation = validation, isEn = isEn)
+                    }
+                }
+            }
+
+            // ==========================================
+            // 第8章: データソースとAPIクレジット
+            // ==========================================
+            item {
+                GuideSectionHeader(
+                    number = "8",
                     title = com.creditdb.pro.ui.theme.AppStrings.guideSection4Title(isEn)
                 )
             }
@@ -745,6 +800,52 @@ fun GuideScreen(
                         }
                         Text(
                             text = com.creditdb.pro.ui.theme.AppStrings.bangumiRole(isEn),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // IMDb Card
+            item {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "⭐ " + com.creditdb.pro.ui.theme.AppStrings.imdbTitle(isEn),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer
+                            ) {
+                                Text(
+                                    text = "imdb.com",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                        }
+                        Text(
+                            text = com.creditdb.pro.ui.theme.AppStrings.imdbRole(isEn),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -923,6 +1024,75 @@ private fun RoleParamRow(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
+        }
+    }
+}
+
+/** 新指標の検証結果の表（役職ごとの相関 r） */
+@Composable
+private fun ValidationTable(validation: List<com.creditdb.pro.data.MetricValidation>, isEn: Boolean) {
+    val byRole = validation.groupBy { it.role }
+    val roleOrder = listOf("all", "director", "series_comp", "char_design", "unit_director", "sakkan", "genga", "genga_2nd", "music", "art_dir")
+    val methods = listOf(
+        "current" to (if (isEn) "Old" else "旧方式"),
+        "participation" to "S(a)",
+        "contribution" to (if (isEn) "Contrib." else "寄与度")
+    )
+    fun fmt(v: Double?) = if (v == null) "-" else String.format("%.2f", v)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(if (isEn) "Role" else "役職", modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text(if (isEn) "Works" else "作品数", modifier = Modifier.weight(0.9f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                methods.forEach { (_, label) ->
+                    Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+            roleOrder.filter { it in byRole }.forEach { role ->
+                val rows = byRole[role].orEmpty().associateBy { it.method }
+                val best = methods.mapNotNull { (m, _) -> rows[m]?.pearson?.let { m to it } }.maxByOrNull { it.second }?.first
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = if (role == "all") (if (isEn) "All Staff" else "全スタッフ") else com.creditdb.pro.ui.theme.AppStrings.roleCompact(role, isEn),
+                        modifier = Modifier.weight(1.4f),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("${rows["current"]?.n ?: "-"}", modifier = Modifier.weight(0.9f), style = MaterialTheme.typography.bodySmall)
+                    methods.forEach { (m, _) ->
+                        Text(
+                            text = fmt(rows[m]?.pearson),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (m == best) FontWeight.ExtraBold else FontWeight.Normal,
+                            color = if (m == best) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+            val ep = byRole.values.flatten().filter { it.method == "episode" }
+            if (ep.isNotEmpty()) {
+                Text(
+                    text = (if (isEn) "Episode Score → predicting 2023+ episodes (n = ${ep.first().n}): " else "各話評価 → 2023年以降の各話の予測（${ep.first().n}話）: ") +
+                        ep.joinToString(" / ") { "${if (isEn) it.role.replace("各話評価で予測", "Episode Score").replace("総合実力で予測", "S(a)") else it.role} r = ${fmt(it.pearson)}" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            Text(
+                text = if (isEn) {
+                    "Old: S(a) without participation weighting. S(a): current S(a) with participation weighting. Contrib.: ridge regression including studio and series effects. Bold = best for that role."
+                } else {
+                    "旧方式: 参加度の重み付けなしの S(a)。S(a): 参加度で重み付けした現在の総合実力。寄与度: スタジオ・シリーズ効果を含むリッジ回帰。太字はその役職で最も当たった方法。"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }

@@ -1,6 +1,6 @@
 name: Weekly Data Update
 
-# AniList / Bangumi から週1回 DB を更新し、GitHub Release として配布する。
+# AniList / Bangumi / IMDb から週1回 DB を更新し、GitHub Release として配布する。
 # DB は git にコミットしない（リポジトリ容量を増やさないため）。
 # 入力: 最新の Release にある creditdb.zip / 出力: 新しい Release（creditdb.zip + version.json）
 
@@ -39,6 +39,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install Python packages
+        run: pip install numpy scipy # 個人寄与度（リッジ回帰）に使う
+
       - name: Download previous database from the newest release
         id: prev
         run: |
@@ -61,7 +64,8 @@ jobs:
 
       - name: Run weekly updater
         run: |
-          ARGS="--input work/creditdb.zip --out-dir out --covers-seed app/src/main/assets/work_covers.json --anilist-out store/anilist_credits.zip"
+          # --imdb-dir: IMDb の公開データ（約800MB）を毎回ダウンロードして各話評価を作る（保存はしない）
+          ARGS="--input work/creditdb.zip --out-dir out --covers-seed app/src/main/assets/work_covers.json --anilist-out store/anilist_credits.zip --imdb-dir imdb"
           if [ -f work/anilist_credits.zip ]; then ARGS="$ARGS --anilist-store work/anilist_credits.zip"; fi
           if [ "${{ inputs.recalc_only }}" = "true" ]; then ARGS="$ARGS --recalc-only"; fi
           python tools/weekly_updater.py $ARGS
@@ -100,7 +104,7 @@ jobs:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: "CreditDB Data Release ${{ steps.meta.outputs.tag }}"
           body: |
-            Automated weekly CreditDB database update (AniList & Bangumi API).
+            Automated weekly CreditDB database update (AniList & Bangumi API, IMDb episode ratings).
             - Updated at: ${{ steps.meta.outputs.updated }}
             - Works: ${{ steps.meta.outputs.works }} / Staff: ${{ steps.meta.outputs.staff }} / Cast: ${{ steps.meta.outputs.cv }}
             - File: `creditdb.zip` (${{ steps.meta.outputs.size_mb }} MB)
