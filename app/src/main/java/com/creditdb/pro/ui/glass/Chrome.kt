@@ -62,40 +62,41 @@ fun rememberChromeContentPadding(
 
 /**
  * 画面ごとに上部1行フローティングバーの内容を登録・解除するコントローラ。
- * 画面遷移時に前画面の onDispose が新画面の登録を上書きしないよう owner トークンで管理する。
+ * 登録した画面を積み重ねて覚え、最後に登録した画面の内容を表示する。
+ * 画面が解除されたら、まだ残っている1つ前の画面の内容に戻す。
+ * （1枠だけだと、戻る操作を途中でやめたときなどに、表示中の画面のバーまで消えて
+ *   「CreditDB PRO」の代わりの表示になってしまう）
  */
 @Stable
 class TopBarController {
-    private var activeOwner: Any? = null
+    private val owners = mutableListOf<Pair<Any, @Composable () -> Unit>>()
     var content by mutableStateOf<(@Composable () -> Unit)?>(null)
         private set
 
-    private var activeOverlayOwner: Any? = null
+    private val overlayOwners = mutableListOf<Pair<Any, @Composable BoxScope.() -> Unit>>()
     var floatingOverlay by mutableStateOf<(@Composable BoxScope.() -> Unit)?>(null)
         private set
 
     fun set(owner: Any, composable: @Composable () -> Unit) {
-        activeOwner = owner
+        owners.removeAll { it.first === owner }
+        owners.add(owner to composable)
         content = composable
     }
 
     fun clear(owner: Any) {
-        if (activeOwner === owner) {
-            activeOwner = null
-            content = null
-        }
+        owners.removeAll { it.first === owner }
+        content = owners.lastOrNull()?.second
     }
 
     fun setOverlay(owner: Any, composable: @Composable BoxScope.() -> Unit) {
-        activeOverlayOwner = owner
+        overlayOwners.removeAll { it.first === owner }
+        overlayOwners.add(owner to composable)
         floatingOverlay = composable
     }
 
     fun clearOverlay(owner: Any) {
-        if (activeOverlayOwner === owner) {
-            activeOverlayOwner = null
-            floatingOverlay = null
-        }
+        overlayOwners.removeAll { it.first === owner }
+        floatingOverlay = overlayOwners.lastOrNull()?.second
     }
 }
 
