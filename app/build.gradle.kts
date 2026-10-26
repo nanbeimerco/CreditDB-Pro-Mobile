@@ -101,6 +101,7 @@ val fetchBundledDb by tasks.registering {
     description = "最新の Release から同梱用の creditdb.zip をダウンロードする"
     outputs.file(bundledDb)
     onlyIf { refreshBundledDb || !bundledDb.exists() }
+    outputs.upToDateWhen { !refreshBundledDb }  // -PrefreshDb のときは必ず取り直す
     doLast {
         val api = URI("https://api.github.com/repos/nanbeimerco/CreditDB-Pro-Mobile/releases?per_page=30").toURL()
         val json = api.openStream().use { it.readBytes().toString(Charsets.UTF_8) }
