@@ -1144,101 +1144,30 @@ class CreditRepository(private val context: Context) {
         val db = dbHelper.readableDatabase
         val featuresMap = mutableMapOf<String, Float>()
 
-        val mainRoles = listOf("director", "series_comp", "char_design", "unit_director", "sakkan", "music", "art_dir", "cv")
-
-        for (role in mainRoles) {
+        // 選ばれた人の実績を読み込み、空いている枠は「平均的な人」で埋めて特徴量を作る。
+        // 未選択の役職を 0 のまま渡すと、モデルが「情報の少ない無名作品」と判断して予測が大きく下がるため。
+        for (role in PREDICT_ROLES) {
             val names = staffMap[role] ?: emptyList()
-            if (names.isEmpty()) {
-                featuresMap["${role}_bayesian_s"] = 0f
-                featuresMap["${role}_mean_z"] = 0f
-                featuresMap["${role}_max_z"] = 0f
-                featuresMap["${role}_past_count"] = 0f
-            } else {
+            val people = mutableListOf<StaffRecord>()
+            if (names.isNotEmpty()) {
                 val placeholders = names.joinToString(",") { "?" }
                 val queryArgs = (listOf(role) + names).toTypedArray()
-                val sql = "SELECT works_count, sum_z, max_z FROM staff_role_features WHERE role = ? AND name IN ($placeholders)"
-                val cursor = db.rawQuery(sql, queryArgs)
-                var totalCount = 0
-                var sumZ = 0.0
-                var maxZ = -999.0
-
-                while (cursor.moveToNext()) {
-                    val count = cursor.getInt(0)
-                    val sZ = cursor.getDouble(1)
-                    val mZ = cursor.getDouble(2)
-                    totalCount += count
-                    sumZ += sZ
-                    if (mZ > maxZ) maxZ = mZ
-                }
-                cursor.close()
-
-                if (totalCount > 0) {
-                    val m = predictionEngine.getM(role)
-                    val bayesianS = sumZ / (totalCount + m)
-                    val meanZ = sumZ / totalCount
-                    featuresMap["${role}_bayesian_s"] = bayesianS.toFloat()
-                    featuresMap["${role}_mean_z"] = meanZ.toFloat()
-                    featuresMap["${role}_max_z"] = (if (maxZ > -900) maxZ else 0.0).toFloat()
-                    featuresMap["${role}_past_count"] = totalCount.toFloat()
-                } else {
-                    featuresMap["${role}_bayesian_s"] = 0f
-                    featuresMap["${role}_mean_z"] = 0f
-                    featuresMap["${role}_max_z"] = 0f
-                    featuresMap["${role}_past_count"] = 0f
+                val sql = "SELECT works_count, sum_z, max_z, bayesian_s FROM staff_role_features WHERE role = ? AND name IN ($placeholders)"
+                db.rawQuery(sql, queryArgs).use { c ->
+                    while (c.moveToNext()) {
+                        people += StaffRecord(c.getInt(0), c.getDouble(1), c.getDouble(2), c.getDouble(3))
+                    }
                 }
             }
-        }
+            val avg = AVERAGE_STAFF.getValue(role)
+            // 実績のない人（新人など）も枠は使うので、名前の数で空き枠を数える
+            repeat((avg.slots - names.size).coerceAtLeast(0)) { people += avg.record }
 
-        // Genga
-        val gengaNames = staffMap["genga"] ?: emptyList()
-        if (gengaNames.isNotEmpty()) {
-            val placeholders = gengaNames.joinToString(",") { "?" }
-            val queryArgs = (listOf("genga") + gengaNames).toTypedArray()
-            val sql = "SELECT works_count, sum_z, max_z, bayesian_s FROM staff_role_features WHERE role = ? AND name IN ($placeholders)"
-            val cursor = db.rawQuery(sql, queryArgs)
-            var totalCount = 0
-            var sumZ = 0.0
-            var maxZ = -999.0
-            var sSum = 0.0
-            var topCount = 0
-            var rowCount = 0
-
-            while (cursor.moveToNext()) {
-                val count = cursor.getInt(0)
-                val sZ = cursor.getDouble(1)
-                val mZ = cursor.getDouble(2)
-                val bS = cursor.getDouble(3)
-                totalCount += count
-                sumZ += sZ
-                sSum += bS
-                if (mZ > maxZ) maxZ = mZ
-                if (bS > 0.5) topCount++
-                rowCount++
-            }
-            cursor.close()
-
-            if (rowCount > 0) {
-                featuresMap["genga_weighted_s"] = (sSum / rowCount).toFloat()
-                featuresMap["genga_top_density"] = (topCount.toDouble() / rowCount).toFloat()
-                featuresMap["genga_max_s"] = (if (maxZ > -900) maxZ else 0.0).toFloat()
-                featuresMap["genga_total_count"] = gengaNames.size.toFloat()
-                featuresMap["genga_experienced_ratio"] = (rowCount.toDouble() / gengaNames.size).toFloat()
-                featuresMap["genga_sum_weights"] = gengaNames.size.toFloat()
+            if (role == "genga") {
+                putGengaFeatures(featuresMap, people, totalCount = maxOf(names.size, avg.slots))
             } else {
-                featuresMap["genga_weighted_s"] = 0f
-                featuresMap["genga_top_density"] = 0f
-                featuresMap["genga_max_s"] = 0f
-                featuresMap["genga_total_count"] = gengaNames.size.toFloat()
-                featuresMap["genga_experienced_ratio"] = 0f
-                featuresMap["genga_sum_weights"] = 0f
+                putRoleFeatures(featuresMap, role, people)
             }
-        } else {
-            featuresMap["genga_weighted_s"] = 0f
-            featuresMap["genga_top_density"] = 0f
-            featuresMap["genga_max_s"] = 0f
-            featuresMap["genga_total_count"] = 0f
-            featuresMap["genga_experienced_ratio"] = 0f
-            featuresMap["genga_sum_weights"] = 0f
         }
 
         // Era stats lookup
@@ -1251,6 +1180,41 @@ class CreditRepository(private val context: Context) {
 
         val result = predictionEngine.predict(featuresMap, year, eraStat)
         result.copy(title = title.ifBlank { "新規企画アニメ" })
+    }
+
+    private fun putRoleFeatures(out: MutableMap<String, Float>, role: String, people: List<StaffRecord>) {
+        val totalCount = people.sumOf { it.worksCount }
+        if (totalCount <= 0) {
+            // 実績のない人だけが入っている（新人など）
+            out["${role}_bayesian_s"] = 0f
+            out["${role}_mean_z"] = 0f
+            out["${role}_max_z"] = 0f
+            out["${role}_past_count"] = 0f
+            return
+        }
+        val sumZ = people.sumOf { it.sumZ }
+        out["${role}_bayesian_s"] = (sumZ / (totalCount + predictionEngine.getM(role))).toFloat()
+        out["${role}_mean_z"] = (sumZ / totalCount).toFloat()
+        out["${role}_max_z"] = people.maxOf { it.maxZ }.toFloat()
+        out["${role}_past_count"] = totalCount.toFloat()
+    }
+
+    private fun putGengaFeatures(out: MutableMap<String, Float>, people: List<StaffRecord>, totalCount: Int) {
+        if (people.isEmpty()) {
+            out["genga_weighted_s"] = 0f
+            out["genga_top_density"] = 0f
+            out["genga_max_s"] = 0f
+            out["genga_total_count"] = totalCount.toFloat()
+            out["genga_experienced_ratio"] = 0f
+            out["genga_sum_weights"] = 0f
+            return
+        }
+        out["genga_weighted_s"] = people.map { it.bayesianS }.average().toFloat()
+        out["genga_top_density"] = (people.count { it.bayesianS > 0.5 }.toDouble() / people.size).toFloat()
+        out["genga_max_s"] = people.maxOf { it.maxZ }.toFloat()
+        out["genga_total_count"] = totalCount.toFloat()
+        out["genga_experienced_ratio"] = (people.size.toDouble() / totalCount).toFloat()
+        out["genga_sum_weights"] = totalCount.toFloat()
     }
 
     /**
@@ -1821,3 +1785,28 @@ class CreditRepository(private val context: Context) {
     }
 }
 
+
+/** 予測に使うスタッフ1人分の実績（staff_role_features の1行） */
+private data class StaffRecord(val worksCount: Int, val sumZ: Double, val maxZ: Double, val bayesianS: Double)
+
+/** 役職ごとの「1作品あたりの普通の人数」と「平均的な1人」 */
+private class AverageStaff(val slots: Int, worksCount: Int, meanZ: Double, maxZ: Double, bayesianS: Double) {
+    val record = StaffRecord(worksCount, worksCount * meanZ, maxZ, bayesianS)
+}
+
+private val PREDICT_ROLES = listOf(
+    "director", "series_comp", "char_design", "unit_director", "sakkan", "music", "art_dir", "cv", "genga"
+)
+
+// 2010年以降の作品から求めた中央値（人数はクレジットされている人数、1人分の値はその役職での実績）
+private val AVERAGE_STAFF = mapOf(
+    "director" to AverageStaff(slots = 1, worksCount = 5, meanZ = 0.058, maxZ = 0.872, bayesianS = 0.032),
+    "series_comp" to AverageStaff(slots = 2, worksCount = 19, meanZ = 0.057, maxZ = 1.413, bayesianS = 0.044),
+    "char_design" to AverageStaff(slots = 1, worksCount = 4, meanZ = 0.071, maxZ = 0.769, bayesianS = 0.043),
+    "unit_director" to AverageStaff(slots = 8, worksCount = 21, meanZ = 0.140, maxZ = 1.714, bayesianS = 0.108),
+    "sakkan" to AverageStaff(slots = 11, worksCount = 14, meanZ = 0.086, maxZ = 1.524, bayesianS = 0.065),
+    "music" to AverageStaff(slots = 1, worksCount = 12, meanZ = 0.107, maxZ = 1.282, bayesianS = 0.083),
+    "art_dir" to AverageStaff(slots = 2, worksCount = 11, meanZ = 0.308, maxZ = 1.565, bayesianS = 0.208),
+    "cv" to AverageStaff(slots = 21, worksCount = 68, meanZ = 0.119, maxZ = 2.117, bayesianS = 0.165),
+    "genga" to AverageStaff(slots = 17, worksCount = 27, meanZ = 0.286, maxZ = 2.005, bayesianS = 0.229),
+)
