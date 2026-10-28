@@ -14,8 +14,8 @@ android {
         applicationId = "com.creditdb.pro"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -25,7 +25,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 でコードを最適化し、使っていないリソースも削る
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // 個人で実機に入れる用途なので、デバッグ用の鍵で署名する。
+            // 同じ鍵なのでデバッグ版を入れた端末にもデータを残したまま上書きできる。
+            // ストアで配布する場合は専用の鍵に切り替えること。
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
