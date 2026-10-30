@@ -365,11 +365,15 @@ def merge_cast_lists(old_json_str: str, new_list: list) -> list:
                 seen.add(key)
     return merged
 
+ANILIST_INTERVAL_SEC = 2.1  # AniList の制限（劣化時 30回/分）を超えない間隔。anilist_credits.py と同じ
+_anilist_last_request = 0.0
+
 def execute_anilist_query(query: str, variables: dict = None, retries: int = 3):
+    global _anilist_last_request
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (CreditDB-Updater; +https://github.com/nanbeimerco/CreditDB-Pro-Mobile)"
     }
     payload = json.dumps({"query": query, "variables": variables or {}}).encode("utf-8")
     req = urllib.request.Request(ANILIST_ENDPOINT, data=payload, headers=headers, method="POST")
@@ -377,7 +381,10 @@ def execute_anilist_query(query: str, variables: dict = None, retries: int = 3):
     last_err = None
     for attempt in range(retries):
         try:
-            time.sleep(0.55)
+            wait = ANILIST_INTERVAL_SEC - (time.time() - _anilist_last_request)
+            if wait > 0:
+                time.sleep(wait)
+            _anilist_last_request = time.time()
             with urllib.request.urlopen(req, timeout=15) as res:
                 if res.status == 200:
                     STATS["anilist_ok"] += 1
