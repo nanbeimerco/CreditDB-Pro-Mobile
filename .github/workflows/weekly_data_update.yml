@@ -97,11 +97,28 @@ jobs:
           print(f"size_mb={v['dbSizeCompressed']/1048576:.1f}")
           EOF
 
+      - name: Commit a release record
+        # GitHub の Release 一覧は「タグを付けたコミットの日時」順に並ぶ。コミットのない週に
+        # 前回と同じコミットへタグを付けると、どちらが最新か決まらなくなる（アプリが古い DB を取る）。
+        # 毎回記録用のコミットを作り、そこにタグを付けて、新しい Release が必ず先頭に来るようにする。
+        if: steps.check.outputs.changed == 'true'
+        id: record
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin "${GITHUB_REF_NAME}" # 実行中に push された変更を取り込む
+          printf '%s\n%s\n' "${{ steps.meta.outputs.tag }}" "db-sha256: ${{ steps.check.outputs.new_sha }}" > .github/data-release
+          git add .github/data-release
+          git commit -m "Record data release ${{ steps.meta.outputs.tag }} [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Publish release
         if: steps.check.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ steps.record.outputs.sha }}
           name: "CreditDB Data Release ${{ steps.meta.outputs.tag }}"
           body: |
             Automated weekly CreditDB database update (AniList & Bangumi API, IMDb episode ratings).
@@ -141,6 +158,7 @@ jobs:
       - name: Keep scheduled workflows active
         # GitHub はリポジトリに60日間動きがないと定期実行（この更新と AniList の一括取得）を止める。
         # 最後のコミットから45日たっていたら、記録用のファイルを1つコミットして止まらないようにする。
+        # DB が更新された週は上の記録コミットがあるので、ここが動くのは DB に変化がない週が続いたときだけ。
         if: always()
         run: |
           LAST=$(git log -1 --format=%ct)
